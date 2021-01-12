@@ -1,7 +1,7 @@
 const { response } = require("express");
+const { getEstructuraExpediente } = require("../helpers/expediente.helper");
 const Expediente = require("../models/expediente.model");
-const Item = require("../models/item-expediente.model")
-
+const Item = require('../models/item-expediente.model');
 
 const create = async(req, res = response) => {
 
@@ -18,16 +18,20 @@ const create = async(req, res = response) => {
             })
         }
 
-        const item = new Item( req.body );
-        const expediente = new Expediente({ alumno, items: item });
-
-        await item.save();
+        const expediente = new Expediente({alumno});
         await expediente.save();
 
+        const estructura = getEstructuraExpediente(expediente._id);
+
  
+        estructura.forEach( async item => {
+            const nuevoItem = new Item( item );
+            await nuevoItem.save();
+        })
+
         res.status(201).json({
-            status: true, 
-            expediente
+            status: true,
+            message: 'Expdiente creado con éxito.'
         })
 
     }  catch (error) {
@@ -40,39 +44,22 @@ const create = async(req, res = response) => {
 
 }
 
-const getByAlumnoId = async(req, res = response) => {
+const getByAlumno = async(req, res = response) => {
 
-        const  alumno = req.params.alumno;
+    try{
 
-    try {
-
-        const expediente = await Expediente.findOne( {alumno} )
-            .populate( 'alumno', 'nombre' )
-            .populate({
-                path: 'items',
-                populate: { path: 'item'}
-            });
-
-        if (!expediente) {
-            return res.status(404).json({
-                status: false,
-                message: 'No existe un expediente con ese id alumno'
-            })
-        }
+        const alumno = req.params.alumno;
 
         res.status(200).json({
-            status: true,
-            expediente
+            alumno
         })
 
-    } catch( error ){
-
+    } catch(error) {
         console.log(error);
         return res.status(500).json({
             status: false,
             message: 'Hable con el administrador'
         })
-
     }
 
 }
@@ -80,41 +67,12 @@ const getByAlumnoId = async(req, res = response) => {
 const getById = async(req, res = response) => {
 
 
-    const uid = req.params.id
-
-    try {
-
-        const expediente = await Expediente.findById(uid)
-            .populate({
-                path: 'items',
-                populate: { path: 'item'}
-            })
-
-        if (!expediente) {
-            return res.status(404).json({
-                status: false,
-                message: 'No existe un expediente con ese id'
-            })
-        }
-
-        res.status(200).json({
-            status: true,
-            expediente
-        })
-
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            status: false,
-            message: 'Hable con el administrador'
-        })
-    }
 
 }
 
 
 module.exports = {
     create,
-    getByAlumnoId,
+    getByAlumno,
     getById
 }

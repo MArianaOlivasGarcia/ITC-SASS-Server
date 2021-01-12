@@ -24,7 +24,25 @@ const generarJWT = (uid) => {
 
 
 
+const comprobarJWT = ( bearerToken = '') => {
+
+    try {
+        
+        const token = bearerToken.split(' ')[1];
+        const {uid}  = jwt.verify(token, process.env.JWT_SEED)
+
+        return [true, uid];
+
+    } catch(error){
+        return [false, null];
+    }
+
+}
+
+
+
 
 module.exports = {
-    generarJWT
+    generarJWT,
+    comprobarJWT
 }

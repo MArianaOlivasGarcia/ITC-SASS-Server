@@ -3,8 +3,6 @@ const path = require('path');
 require('dotenv').config();
 const morgan = require('morgan')
 const cors = require('cors')
-const swaggerJsDoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
 
 //DB Config
 require('./database/config').dbConnection();
@@ -12,29 +10,13 @@ require('./database/config').dbConnection();
 // App de Express
 const app = express();
 
+// Node Server
+const server = require('http').createServer(app);
+module.exports.io = require('socket.io')(server);
+require('./sockets/socket');
+
 // Configuracion cors
-app.use(cors())
-
-// Swagger
-const swaggerOptions = {
-    swaggerDefinition: {
-        info: {
-            title: 'Sistema Automatizacion Servicio Social API',
-            contact: {
-                name: 'Mariana Olivas'
-            },
-            servers: ['http://localhost:3000'],
-        }
-    },
-    apis: [
-        './routes/test.routes.js',
-        './routes/alumno.routes.js'
-    ]
-}
-
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
-
+app.use( cors({ origin: true, credentials: true  }) )
 
 // Morgan
 app.use(morgan('dev'));
@@ -42,14 +24,6 @@ app.use(morgan('dev'));
 
 // Lectura y parseo de Body
 app.use(express.json());
-
-
-// Node Server
-const server = require('http').createServer(app);
-module.exports.io = require('socket.io')(server);
-require('./sockets/socket');
-
-
 
 
 // Path público

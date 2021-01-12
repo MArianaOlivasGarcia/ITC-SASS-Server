@@ -2,7 +2,17 @@
 
 const { Router } = require('express');
 const { check } = require('express-validator');
-const { register, login, renovarJWT, getAll, getAllByCarrera, getById, update, changePassword, renovarPassword } = require('../controllers/alumno.controller');
+const { register,
+        login,
+        renovarJWT,
+        getAll,
+        getAllByCarrera,
+        getById,
+        getExpediente,
+        update,
+        changePassword,
+        renovarPassword,
+        asignarProyecto } = require('../controllers/alumno.controller');
 const { validarCampos } = require('../middleware/validar-campos.middleware');
 const { validarJWT } = require('../middleware/validar-jwt.middleware');
 const router = Router();
@@ -25,12 +35,15 @@ router.post('/login', [
 
 
 router.get('/all', getAll)
-
+ 
 router.get('/renovar', validarJWT, renovarJWT)
+
+router.get('/expediente', validarJWT, getExpediente)
 
 router.get('/:id', getById)
 
 router.get('/all/:carrera', getAllByCarrera)
+
 
 router.put('/password', [
     validarJWT,
@@ -46,6 +59,9 @@ router.put('/renewpassword/:id', [
 ], renovarPassword )
 
 router.put('/:id', update)
+
+
+router.patch('/', validarJWT, asignarProyecto)
  
 
 

@@ -3,6 +3,7 @@ const Usuario = require('../models/usuario.model')
 const Alumno = require('../models/alumno.model')
 const Dependencia = require('../models/dependencia.model')
 const Proyecto = require('../models/proyecto.model')
+const Carrera = require('../models/carrera.model')
 
 const getTodo = async(req, res = response) => {
 
@@ -24,7 +25,23 @@ const getTodo = async(req, res = response) => {
 }
 
 
-const getColeccion = async(req, res = response ) => {
+const getProyectosByCarrera = async(req, res = response) => {
+
+    const carrera = req.params.carrera
+    const busqueda  = req.params.busqueda;
+    const regex = new RegExp( busqueda, 'i' )
+
+    let data = await Proyecto.find( {nombre: regex, 'carreras.carrera': carrera } )
+                            .populate('dependencia', 'nombre')
+
+    res.json({
+        status: true,
+        respuesta: data
+    })
+}
+
+
+const getColeccion = async(req, res = response) => {
 
     const coleccion = req.params.coleccion;
     const busqueda  = req.params.busqueda;
@@ -52,6 +69,10 @@ const getColeccion = async(req, res = response ) => {
                          .populate('dependencia', 'nombre')
         break;
 
+        case 'carreras':
+            data = await Carrera.find( {nombre: regex} )
+        break;
+
 
         default:
             return res.status(400).json({
@@ -75,5 +96,6 @@ const getColeccion = async(req, res = response ) => {
 
 module.exports = {
     getTodo,
-    getColeccion
+    getColeccion,
+    getProyectosByCarrera
 }

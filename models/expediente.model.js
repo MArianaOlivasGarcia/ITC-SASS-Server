@@ -5,7 +5,6 @@ const ExpedienteSchema = Schema({
 
     alumno: { type: Types.ObjectId, ref: 'Alumno', required: true },
     items: [{ type: Types.ObjectId, ref: 'Item'}],
-    /* items: [ ItemExpedienteSchema ],  */
     finished_at: Date
 
 }, { collection: 'expedientes', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });

@@ -12,6 +12,9 @@ router.post('/test/:id', async(req, res = response) => {
         const uid = req.params.id;
 
         const alumno = await Alumno.findById(uid)
+                    .populate('carrera')
+                    .populate('proyecto')
+                    .populate('proyecto.dependencia')
 
         if( !alumno ) {
             return res.status(404).json({
@@ -20,11 +23,12 @@ router.post('/test/:id', async(req, res = response) => {
             })
         }
 
-        await crearArchivo( 'prueba3.docx', alumno.toJSON() , 'HojaDatos.docx' )
+        await crearArchivo( 'ITC-VI-PO-002-02.docx', alumno.toJSON() , 'ITC-VI-PO-002-02 Mariana.docx' )
         
         res.status(200).json({
             status: true,
-            message: 'Archivo creado con éxito'
+            message: 'Archivo creado con éxito',
+            alumno
         })
 
     } catch( error ){
