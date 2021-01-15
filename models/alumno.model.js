@@ -28,7 +28,9 @@ const AlumnoSchema = Schema({
     firma: { type: String }, 
     foto: { type: String },
     password: { type: String, required: true },
+    // Opcional
     proyecto: { type: Types.ObjectId, ref: 'Proyecto' },
+    expediente: { type: Types.ObjectId, ref: 'Expediente' },
 
     video: { type: Boolean, default: false },
     examen: { type: Boolean, default: false },

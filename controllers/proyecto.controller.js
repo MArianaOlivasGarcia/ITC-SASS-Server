@@ -1,6 +1,7 @@
 const { response } = require("express");
 const Proyecto = require("../models/proyecto.model");
 const Alumno = require("../models/alumno.model");
+const Solicitud = require('../models/solicitud-proyecto.model')
 
 const create = async(req, res = response) => {
 
@@ -42,16 +43,20 @@ const createByAlumno = async(req, res = response ) => {
             })
         }
 
-        const data = {
+
+        const proyecto = new Proyecto({
             ...req.body,
             alumno
-        }
-        const proyecto = new Proyecto(data);
+        });
         await proyecto.save()
         
-        alumno.proyecto = proyecto._id;
-        await alumno.save();
-        
+        const solicitud = new Solicitud({
+            alumno,
+            proyecto
+        })
+
+        await solicitud.save();
+
         res.status(201).json({
             status: true,
             proyecto
@@ -190,7 +195,8 @@ const update = async(req, res = response) => {
         }
 
 
-        const proyectoActualizado = await Proyecto.findByIdAndUpdate(uid, req.body, { new: true });
+        const proyectoActualizado = await Proyecto.findByIdAndUpdate(uid, req.body, { new: true })
+                                            .populate('dependencia');
 
         res.status(200).json({
             status: true,
@@ -248,7 +254,15 @@ const getPersonal = async(req, res = response) => {
 
     try {
 
-        const proyecto = await Proyecto.findOne({alumno: id, publico: false})
+        const proyecto = await Proyecto.findOne({alumno: id })
+                                            .populate('dependencia')
+
+        if ( !proyecto ) {
+            return res.status(200).json({
+                status: true,
+                message: 'No tienes un proyecto personal'
+            })
+        }
 
         res.status(200).json({
             status: true,
@@ -264,6 +278,8 @@ const getPersonal = async(req, res = response) => {
     }
 
 }
+
+
 
 
 

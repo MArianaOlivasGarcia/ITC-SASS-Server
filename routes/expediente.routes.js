@@ -7,7 +7,7 @@ const { validarJWT } = require('../middleware/validar-jwt.middleware');
 
 const router = Router();
 
-router.post('/create', [ validarJWT ] , create)
+router.get('/create', [ validarJWT ] , create)
 
 router.get('/:id', getById )
 

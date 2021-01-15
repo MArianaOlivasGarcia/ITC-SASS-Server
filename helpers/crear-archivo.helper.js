@@ -1,11 +1,11 @@
 
-
-const {createReport} = require('docx-templates')
-const path = require('path')
 const fs = require('fs')
-
+const path = require('path')
+const {createReport} = require('docx-templates')
 
 const crearArchivo = async( file, data, nameFile ) => {
+
+ 
     // file, el archivo template (el que se va aditar)
     // data, Información
     // nameFile, nombre del archivo expediente resultante
@@ -17,12 +17,14 @@ const crearArchivo = async( file, data, nameFile ) => {
         data,
         cmdDelimiter: ['{','}'],
     })
-
-    fs.writeFileSync( __dirname + '/' + nameFile , buffer )
+    // Crear el word
+    const pathFinal = path.join( __dirname, `../uploads/expedientes/` );
+    fs.writeFileSync( pathFinal + nameFile , buffer )
+    
 }
+
 
 
 module.exports = {
     crearArchivo
 }
-

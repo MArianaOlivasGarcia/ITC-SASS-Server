@@ -1,11 +1,6 @@
 const { Schema, model, Types } = require('mongoose');
 
 
-const statusValidos = {
-    values: ['Aprobado', 'Rechazado', 'En revisión', 'No iniciado', 'Entrante'],
-    message: '{VALUE} no es un status válido'
-}
-
 
 const ItemExpedienteSchema = Schema({
 
@@ -32,7 +27,9 @@ const ItemExpedienteSchema = Schema({
     revision: { type: Boolean, default: false},
     disponible: { type: Boolean, default: false},
     entrante: { type: Boolean, default: false},
-    iniciado: { type: Boolean }
+    iniciado: { type: Boolean, default: false },
+
+    alumno: { type: Types.ObjectId, ref: 'Alumno'}
 
 }, { collection: 'items', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 

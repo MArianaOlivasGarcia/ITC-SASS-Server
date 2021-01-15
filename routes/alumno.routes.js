@@ -8,7 +8,6 @@ const { register,
         getAll,
         getAllByCarrera,
         getById,
-        getExpediente,
         update,
         changePassword,
         renovarPassword,
@@ -38,7 +37,6 @@ router.get('/all', getAll)
  
 router.get('/renovar', validarJWT, renovarJWT)
 
-router.get('/expediente', validarJWT, getExpediente)
 
 router.get('/:id', getById)
 
@@ -61,7 +59,6 @@ router.put('/renewpassword/:id', [
 router.put('/:id', update)
 
 
-router.patch('/', validarJWT, asignarProyecto)
  
 
 

@@ -66,7 +66,7 @@ const imageUpload = async( req, res = response ) => {
         });
     }
 
-
+    
     const currentPath = `./uploads/images/${coleccion}/${currentColleccion.foto}`;
     borrarImagen( currentPath )
 
@@ -274,6 +274,37 @@ const firmaUpload = async( req, res = response ) => {
 
 
 
+const deleteFirma = async(req, res = response) => {
+
+    const id = req.params.idAlumno;
+
+    const alumnodb = await Alumno.findById(id)
+                            .populate('carrera');
+
+    if ( !alumnodb ) {
+        return res.status(404).json({
+            status: false,
+            message: `No existe un alumno con el ID ${id}`
+        })
+    }
+
+    const pathFirma = path.join( __dirname, `../uploads/firmas/alumnos/${ alumnodb.firma }` );
+
+    borrarImagen( pathFirma );
+
+    alumnodb.firma = undefined;
+
+    await alumnodb.save();
+
+
+    res.status(200).json({
+        status: true,
+        message: 'Firma eliminada con éxito',
+        alumno: alumnodb
+    })
+
+}
+
 
 
 
@@ -283,5 +314,6 @@ module.exports = {
     firmaUpload,
     obtenerImagen,
     fileUpload,
+    deleteFirma,
     obtenerFirma
 }

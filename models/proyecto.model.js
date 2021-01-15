@@ -11,7 +11,7 @@ const ProyectoSchema = Schema({
     }],
     actividades: { type: String },
     periodo: { type: String },
-    lugar_desempeño: { type: String }, 
+    lugar_desempeno: { type: String }, 
     modalidad: { type: String },
     tipo: { type: String },
     horario: { type: String },

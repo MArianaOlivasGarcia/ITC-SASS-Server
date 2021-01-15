@@ -1,5 +1,7 @@
 const { response } = require("express");
 const Item = require('../models/item-expediente.model');
+const Alumno = require('../models/alumno.model');
+
 
 const getById = async(req, res = response) => {
 
@@ -15,6 +17,9 @@ const getById = async(req, res = response) => {
                 message: `No existe un item con el ID ${uid}`
             })
         }
+
+        const alumno = await Alumno.findOne({expediente: item.expediente});
+        item.alumno = alumno;
 
         res.status(200).json({
             status: true,
@@ -32,6 +37,44 @@ const getById = async(req, res = response) => {
 }
 
 
+const getAllByCodigo = async(req, res = response) => {
+
+    const codigo = req.params.codigo;
+
+    const [aprobados, rechazados, pendientes] = await Promise.all([
+        Item.find({codigo, arpobado: true}),
+        Item.find({codigo, rechazado: true}),
+        Item.find({codigo, revision: true})
+    ])
+
+
+    for (let i = 0; i < pendientes.length; i++) {
+        const pendiente = pendientes[i];
+        const alumno = await Alumno.findOne({expediente: pendiente.expediente});
+        pendiente.alumno = alumno;
+    }
+
+    for (let i = 0; i < aprobados.length; i++) {
+        const aprobado = aprobados[i];
+        const alumno = await Alumno.findOne({expediente: aprobado.expediente});
+        aprobado.alumno = alumno;
+    }
+
+    for (let i = 0; i < rechazados.length; i++) {
+        const rechazado = rechazados[i];
+        const alumno = await Alumno.findOne({expediente: rechazado.expediente});
+        rechazado.alumno = alumno;
+    }
+
+    res.status(200).json({
+        aprobados,
+        rechazados,
+        pendientes
+    })
+
+}
+
 module.exports = {
-    getById
+    getById,
+    getAllByCodigo
 }

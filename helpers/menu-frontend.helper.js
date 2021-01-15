@@ -21,9 +21,16 @@ const getMenuFrontEnd = ( role = 'USER_ROLE' ) => {
           ]
         }, */
         {
+          titulo: 'SOLICITUDES',
+          submenu: [
+            { titulo: 'Proyectos', icono: 'fas fa-briefcase mr-2', url: 'solicitudes' }
+          ]
+        },
+        {
           titulo: 'DOCUMENTOS',
           submenu: [
-            { titulo: 'Solicitud de Servicio Social', icono: 'fas fa-file-alt mr-2', url: 'documentos/SSS' },
+            { titulo: 'Solicitud de Servicio Social', icono: 'fas fa-file-alt mr-2', url: 'documentos/ITC-VI-PO-002-02' },
+            { titulo: 'Carta de Asignación de Servicio Social', icono: 'fas fa-file-alt mr-2', url: 'documentos/ITC-VI-PO-002-03' }
           ]
         }
       ];

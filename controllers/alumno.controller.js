@@ -1,13 +1,11 @@
 const { response } = require('express');
 const Alumno = require('../models/alumno.model');
-const Expediente = require('../models/expediente.model');
 const Item = require('../models/item-expediente.model');
 const bcrypt = require('bcryptjs');
 const { generarJWT } = require('../helpers/jwt.helper')
 const { getMenuAlumnoFrontEnd } = require('../helpers/menu-frontend.helper');
 
 
-// No se usa
 const register = async(req, res = response) => {
 
     const { numero_control } = req.body
@@ -108,14 +106,20 @@ const renovarJWT = async(req, res = response) => {
 
     const accessToken = await generarJWT(uid)
 
-    let user = await Alumno.findById(uid)
+    const user = await Alumno.findById(uid)
                         .populate('carrera')
                         .populate('proyecto')
                         .populate({
                             path: 'proyecto',
                             populate: { path: 'dependencia'}
                         })
+                        .populate('expediente')
 
+
+    if ( user.expediente ) {
+        const items = await Item.find({expediente: user.expediente })
+        user.expediente.items = items;
+    }
 
     res.json({
         status: true,
@@ -221,43 +225,6 @@ const getById = async(req, res = response) => {
 }
 
 
-
-const getExpediente = async(req, res = response) => {
-
-    const alumno = req.uid;
-
-    try {
-
-        const expediente = await Expediente.findOne({alumno})
-
-        if (!expediente) {
-            return res.status(404).json({
-                status: false,
-                message: 'El Alumno no tiene un expediente'
-            })
-        }
-
-        const items = await Item.find({expediente})
-                                .sort('numero');
-
-        expediente.items = items;
-
-        res.status(200).json({
-            status: true,
-            expediente
-        })
-
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            status: false,
-            message: 'Hable con el administrador'
-        })
-    }
-
-}
-
-
 const update = async(req, res = response) => {
 
     const uid = req.params.id;
@@ -308,8 +275,6 @@ const update = async(req, res = response) => {
 }
 
 
-
-
 const renovarPassword = async(req, res = response) => {
 
     const uidAlumno = req.params.id;
@@ -350,8 +315,6 @@ const renovarPassword = async(req, res = response) => {
     }
 
 }
-
-
 
 
 
@@ -415,24 +378,29 @@ const asignarProyecto = async(req,res = response) => {
     const id = req.uid;
     const proyecto  = req.body
 
-    const alumno = await Alumno.findById(id);
+    const alumnoActualizado = await Alumno.findByIdAndUpdate(id, {proyecto}, {new: true})
+                                        .populate('proyecto')
+                                        .populate({
+                                            path: 'proyecto',
+                                            populate: { path: 'dependencia' }
+                                        });
 
-    if ( !alumno ) {
+    if ( !alumnoActualizado ) {
         return res.status(404).json({
             status: false,
             message: `No existe un alumno con el ID ${id}`
         })
     }
 
-    alumno.proyecto = proyecto;
-
-    await alumno.save();
-
+    
     res.status(200).json({
-        alumno
+        status: true,
+        proyecto: alumnoActualizado.proyecto
     })
 
 }
+
+
 
 
 
@@ -444,7 +412,6 @@ module.exports = {
     getAll,
     getAllByCarrera,
     getById,
-    getExpediente,
     update,
     changePassword,
     renovarPassword,

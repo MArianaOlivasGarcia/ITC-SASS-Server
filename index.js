@@ -39,11 +39,13 @@ app.use('/api/usuario', require('./routes/usuario.routes'));
 app.use('/api/alumno', require('./routes/alumno.routes'));
 app.use('/api/dependencia', require('./routes/dependencia.routes'));
 app.use('/api/proyecto', require('./routes/proyecto.routes'));
+app.use('/api/solicitud', require('./routes/solicitud.routes'));
 app.use('/api/carrera', require('./routes/carrera.routes'));
 app.use('/api/expediente', require('./routes/expediente.routes'));
 app.use('/api/item', require('./routes/item-expediente.routes'));
 app.use('/api/busqueda', require('./routes/busqueda.routes'));
 app.use('/api/upload', require('./routes/uploads.routes'));
+app.use('/api/file', require('./routes/file.routes'));
 
 
 server.listen(process.env.PORT, (err) => {

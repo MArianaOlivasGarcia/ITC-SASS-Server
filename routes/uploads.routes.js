@@ -3,7 +3,7 @@
 */
 const { Router } = require('express');
 const expressFileUpload  = require('express-fileupload')
-const { imageUpload, obtenerImagen, fileUpload, firmaUpload, obtenerFirma } = require('../controllers/uploads.controller');
+const { imageUpload, obtenerImagen, fileUpload, firmaUpload, obtenerFirma, deleteFirma } = require('../controllers/uploads.controller');
 const { validarJWT } = require('../middleware/validar-jwt.middleware')
 
 const router = Router();
@@ -20,6 +20,6 @@ router.get('/:coleccion/:foto', obtenerImagen )
 
 router.get('/firma/:coleccion/:firma', obtenerFirma )
 
-
+router.delete('/firma/:idAlumno', deleteFirma);
 
 module.exports = router;
