@@ -8,12 +8,17 @@ const { getMenuAlumnoFrontEnd } = require('../helpers/menu-frontend.helper');
 
 const register = async(req, res = response) => {
 
-    const { numero_control } = req.body
+    const { numero_control } = req.body;
+    const { fecha_nacimiento } = req.body;
 
     try {
 
+        const anio = fecha_nacimiento.slice(0,4);
+        const mes = fecha_nacimiento.slice(5,7);
 
-        const doesExist = await Alumno.findOne({ numero_control })
+        const password = `${anio}/${mes}`
+
+const doesExist = await Alumno.findOne({ numero_control })
 
         if (doesExist) {
             return res.status(400).json({
@@ -26,7 +31,7 @@ const register = async(req, res = response) => {
 
         // ** Encriptar contraseña **//
         const salt = bcrypt.genSaltSync();
-        alumno.password = bcrypt.hashSync(numero_control.toString(), salt);
+        alumno.password = bcrypt.hashSync( password , salt);
 
         const savedAlumno = await alumno.save();
 
@@ -108,6 +113,7 @@ const renovarJWT = async(req, res = response) => {
 
     const user = await Alumno.findById(uid)
                         .populate('carrera')
+                        .populate('periodo')
                         .populate('proyecto')
                         .populate({
                             path: 'proyecto',
@@ -373,33 +379,6 @@ const changePassword = async(req, res = response) => {
 }
 
 
-const asignarProyecto = async(req,res = response) => {
-
-    const id = req.uid;
-    const proyecto  = req.body
-
-    const alumnoActualizado = await Alumno.findByIdAndUpdate(id, {proyecto}, {new: true})
-                                        .populate('proyecto')
-                                        .populate({
-                                            path: 'proyecto',
-                                            populate: { path: 'dependencia' }
-                                        });
-
-    if ( !alumnoActualizado ) {
-        return res.status(404).json({
-            status: false,
-            message: `No existe un alumno con el ID ${id}`
-        })
-    }
-
-    
-    res.status(200).json({
-        status: true,
-        proyecto: alumnoActualizado.proyecto
-    })
-
-}
-
 
 
 
@@ -414,6 +393,5 @@ module.exports = {
     getById,
     update,
     changePassword,
-    renovarPassword,
-    asignarProyecto
+    renovarPassword
 }

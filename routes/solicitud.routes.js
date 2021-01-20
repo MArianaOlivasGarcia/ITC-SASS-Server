@@ -1,19 +1,21 @@
 const { Router } = require('express');
 const { validarJWT } = require('../middleware/validar-jwt.middleware')
-const { create, getByStatus, getPendienteByAlumno, getById, aceptar, rechazar} = require('../controllers/solicitud.controller');
+const { create, getByStatus, getByAlumno, getById, aceptar, rechazar, getAceptadaByAlumno} = require('../controllers/solicitud.controller');
 const router = Router();
 
 router.get('/all/:status', getByStatus)
 
-router.get('/alumno', validarJWT,  getPendienteByAlumno)
+router.get('/alumno', validarJWT,  getByAlumno)
+
+router.get('/alumno/aceptado', validarJWT,  getAceptadaByAlumno)
 
 router.get('/:id', getById)
 
 router.post('/', validarJWT, create )
 
-// CAMBIAR POR TOKEN
-router.put('/aceptar/:id', aceptar)
+// TOKEN DEL USUARIO NO ALUMNO
+router.put('/aceptar/:id', validarJWT, aceptar)
 
-router.put('/rechazar/:id', rechazar)
+router.put('/rechazar/:id', validarJWT, rechazar)
 
 module.exports = router;

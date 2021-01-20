@@ -5,7 +5,6 @@ const fs = require('fs');
 
 const Alumno = require("../models/alumno.model");
 const Usuario = require("../models/usuario.model");
-const Expediente = require("../models/expediente.model")
 
 
 const imageUpload = async( req, res = response ) => {

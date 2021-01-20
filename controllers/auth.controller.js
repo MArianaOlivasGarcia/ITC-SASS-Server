@@ -4,7 +4,7 @@ const { response } = require("express");
 const bcrypt = require('bcryptjs');
 const { generarJWT } = require("../helpers/jwt.helper")
 const Usuario = require('../models/usuario.model')
-const { getMenuFrontEnd } = require('../helpers/menu-frontend.helper');
+const { getMenuFrontEnd, getSubMenuFrontEnd } = require('../helpers/menu-frontend.helper');
  
 const register = async(req, res = response) => {
 
@@ -115,6 +115,7 @@ const renovarJWT = async(req, res = response) => {
         status: true,
         user,
         menu: getMenuFrontEnd( user.role ),
+        submenu: getSubMenuFrontEnd( user.role ),
         accessToken
     })
 }

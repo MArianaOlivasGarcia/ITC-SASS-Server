@@ -1,12 +1,17 @@
 
 const { Router } = require('express');
-const router = Router();
-const { createFile, prueba } = require('../controllers/file.controller');
+const expressFileUpload  = require('express-fileupload')
+const { generateFile, uploadFile } = require('../controllers/file.controller');
 const { validarJWT } = require('../middleware/validar-jwt.middleware')
 
+const router = Router();
 
-router.get('/', prueba );
-router.get('/:codigo', validarJWT ,  createFile );
+router.use( expressFileUpload() )
+// DE PRUEBA
+router.get('/:idItem', validarJWT ,  generateFile );
+
+router.put('/item/:idItem', validarJWT ,  uploadFile );
+
 
 
 module.exports = router;

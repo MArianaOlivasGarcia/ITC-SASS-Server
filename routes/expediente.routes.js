@@ -9,9 +9,9 @@ const router = Router();
 
 router.get('/create', [ validarJWT ] , create)
 
-router.get('/:id', getById )
+router.get('/alumno', validarJWT, getByAlumno)
 
-router.get('/alumno/:alumno', getByAlumno)
+router.get('/:id', getById )
 
 
 

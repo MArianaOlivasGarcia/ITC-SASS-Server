@@ -2,8 +2,30 @@ const { response } = require("express");
 const Dependencia = require("../models/dependencia.model");
 
 
-
 const getAll = async(req, res = response) => {
+
+    try {
+
+
+        const dependencias = await Dependencia.find({}).sort('nombre')
+
+        res.status(200).json({
+            status: true,
+            dependencias
+        })
+        
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
+    
+}
+
+
+const getAllPaginados = async(req, res = response) => {
 
     try {
 
@@ -157,6 +179,7 @@ const update = async(req, res = response) => {
 module.exports = {
     create,
     getAll,
+    getAllPaginados,
     getById,
     update
 }

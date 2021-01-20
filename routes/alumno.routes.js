@@ -10,8 +10,7 @@ const { register,
         getById,
         update,
         changePassword,
-        renovarPassword,
-        asignarProyecto } = require('../controllers/alumno.controller');
+        renovarPassword } = require('../controllers/alumno.controller');
 const { validarCampos } = require('../middleware/validar-campos.middleware');
 const { validarJWT } = require('../middleware/validar-jwt.middleware');
 const router = Router();

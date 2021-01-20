@@ -1,18 +1,17 @@
 const { response } = require("express");
-const Carrera = require("../models/carrera.model");
+const Periodo = require("../models/periodo.model");
+
 
 
 
 const getAll = async(req, res = response) => {
 
     try {
-
-        const carreras = await Carrera.find({}).sort('nombre');
-
+        const periodos = await Periodo.find({})
 
         res.status(200).json({
             status: true,
-            carreras
+            periodos
         })
 
     } catch (error) {
@@ -29,21 +28,21 @@ const getAll = async(req, res = response) => {
 
 
 
+
 const getAllPaginados = async(req, res = response) => {
 
     try {
 
         const desde = Number(req.query.desde) || 0;
 
-        const [carreras, total] = await Promise.all([
-            Carrera.find({ nombre: { $nin: ['TODAS'] } }).skip(desde).limit(5),
-            Carrera.countDocuments({ nombre: { $nin: ['TODAS'] } })
+        const [periodos, total] = await Promise.all([
+            Periodo.find({}).skip(desde).limit(5),
+            Periodo.countDocuments({})
         ]);
-
 
         res.status(200).json({
             status: true,
-            carreras,
+            periodos,
             total
         })
 
@@ -62,38 +61,70 @@ const getAllPaginados = async(req, res = response) => {
 
 const create = async(req, res = response) => {
 
-    const carrera = new Carrera(req.body);
+    // 2020/01/03
+    // YYYY/MM/DD
+    const { isActual } = req.body;
 
-    await carrera.save();
+
+    // Si el periodo es actual, cambiar el que actualimente isActual a false
+    if ( isActual ) {
+
+        // Si hay uno actual
+        const existActual = await Periodo.findOne({isActual:true});
+
+        if( existActual ) {
+            existActual.isActual = false;
+            await existActual.save();
+        }
+
+
+    }
+
+    // No es asignado como periodo actual, simplemente crearlo
+    const periodo = new Periodo(req.body);
+
+    await periodo.save();
 
     res.status(201).json({
         status: true,
-        carrera
+        periodo
     })
 
 }
 
 
+
 const upadate = async(req, res = response) => {
     
     const id = req.params.id
+    const { isActual } = req.body;
 
     try {
 
-        const carreradb = await Carrera.findById(id);
+        // Si el periodo es actual, cambiar el que actualimente isActual a false
+        if ( isActual ) {
+            console.log('Quitar')
+            // Si hay uno actual
+            const existActual = await Periodo.findOne({isActual:true});
+            existActual.isActual = false;
+            await existActual.save();
 
-        if( !carreradb ) {
+        }
+
+        const periododb = await Periodo.findById(id);
+
+        if( !periododb ) {
             return res.status(404).json({
                 status: false,
-                message: `No existe un carrera con el ID ${id}`
+                message: `No existe un periodo con el ID ${id}`
             })
         }
 
-        const carreraActualizada = await Carrera.findByIdAndUpdate(id, req.body, {new:true})
+        const periodoActualizado = await Periodo.findByIdAndUpdate(id, req.body, {new:true})
         
         res.status(200).json({
             status: true,
-            carrera: carreraActualizada
+            periodo: periodoActualizado
         })
 
 
@@ -114,18 +145,21 @@ const getById = async(req, res = response ) => {
 
     try {
 
-        const carrera = await Carrera.findById(id);
+        const periodo = await Periodo.findById(id);
 
-        if( !carrera ) {
+
+        if( !periodo ) {
             return res.status(404).json({
                 status: false,
-                message: `No existe una carrera con el ID ${id}`
+                message: `No existe un periodo con el ID ${id}`
             })
         }
 
+        
+
         res.json({
             status: true,
-            carrera
+            periodo
         })
 
     } catch (error) {
@@ -143,7 +177,7 @@ const getById = async(req, res = response ) => {
 module.exports = {
     getAll,
     getAllPaginados,
-    getById,
     create,
-    upadate
+    upadate,
+    getById
 }

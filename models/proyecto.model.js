@@ -10,7 +10,7 @@ const ProyectoSchema = Schema({
         carrera: { type: Types.ObjectId, ref: 'Carrera' },
     }],
     actividades: { type: String },
-    periodo: { type: String },
+    periodo: { type: Types.ObjectId, ref: 'Periodo' },
     lugar_desempeno: { type: String }, 
     modalidad: { type: String },
     tipo: { type: String },

@@ -24,14 +24,15 @@ const AlumnoSchema = Schema({
     edad: { type: Number },
     porcentaje_avance: { type: Number },
     
-    periodo: { type: String },
+    periodo: { type: Types.ObjectId, ref: 'Periodo' },
     firma: { type: String }, 
     foto: { type: String },
     password: { type: String, required: true },
     // Opcional
     proyecto: { type: Types.ObjectId, ref: 'Proyecto' },
     expediente: { type: Types.ObjectId, ref: 'Expediente' },
-
+/*     programa: { type: Types.ObjectId, ref: 'Programa' },
+ */
     video: { type: Boolean, default: false },
     examen: { type: Boolean, default: false },
     terminos: { type: Boolean, default: false },

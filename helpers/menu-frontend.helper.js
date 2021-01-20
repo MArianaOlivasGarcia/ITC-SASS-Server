@@ -52,6 +52,24 @@ const getMenuFrontEnd = ( role = 'USER_ROLE' ) => {
 
 }
 
+const getSubMenuFrontEnd = ( role = 'USER_ROLE' ) => {
+
+  const submenu = [
+    { titulo: 'Mi perfil', icono: 'fas fa-comments mr-2', url: 'mensajes' },
+/*  { titulo: 'Ajustes', icono: 'fas fa-cogs mr-2', url: 'ajustes' }, */
+    
+  ];
+
+  if ( role == 'ADMIN_ROLE' ) {
+    submenu.splice(1, 0, 
+      { titulo: 'Ajustes', icono: 'fas fa-cogs mr-2', url: 'ajustes' }
+    )
+  }
+
+  return submenu;
+
+}
+
 
 
 const getMenuAlumnoFrontEnd = () => {
@@ -74,5 +92,6 @@ const getMenuAlumnoFrontEnd = () => {
 
 module.exports = {
     getMenuFrontEnd,
+    getSubMenuFrontEnd,
     getMenuAlumnoFrontEnd
 }

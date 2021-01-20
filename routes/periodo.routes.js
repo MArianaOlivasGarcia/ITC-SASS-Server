@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { getAll, create , getById, upadate, getAllPaginados} = require('../controllers/carrera.controller');
+const { getAll, getById, create, upadate, getAllPaginados } = require('../controllers/periodo.controller');
 const router = Router();
 
 
@@ -13,5 +13,7 @@ router.get('/:id', getById)
 router.put('/:id', upadate)
 
 router.post('/create', create)
+
+
 
 module.exports = router;

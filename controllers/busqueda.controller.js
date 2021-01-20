@@ -65,8 +65,9 @@ const getColeccion = async(req, res = response) => {
         break;
 
         case 'proyectos':
-            data = await Proyecto.find( {nombre: regex} )
+            data = await Proyecto.find( {$or: [{nombre: regex }]} )
                          .populate('dependencia', 'nombre')
+                         .populate('periodo', 'nombre')
         break;
 
         case 'carreras':

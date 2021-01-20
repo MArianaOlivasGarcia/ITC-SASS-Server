@@ -15,6 +15,7 @@ const SolicitudSchema = Schema({
     pendiente: { type: Boolean, default: true },
     rechazado: { type: Boolean, default: false },
     aceptado: { type: Boolean, default: false },
+    fecha_envio: { type: Date, default: Date.now() }
 
 }, { collection: 'solicitudes', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 

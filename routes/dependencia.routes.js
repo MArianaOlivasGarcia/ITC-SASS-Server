@@ -1,7 +1,7 @@
 // path: api/dependencia
 const { Router } = require('express');
 const { check } = require('express-validator');
-const { create, getAll, getById, update } = require('../controllers/dependencia.controller');
+const { create, getAllPaginados, getById, update, getAll } = require('../controllers/dependencia.controller');
 const { validarCampos } = require('../middleware/validar-campos.middleware');
 const router = Router();
 
@@ -15,7 +15,10 @@ router.post('/create', [
     validarCampos
 ], create);
 
+
 router.get('/all', getAll)
+
+router.get('/all/paginados', getAllPaginados )
 
 router.get('/:id', getById)
 
