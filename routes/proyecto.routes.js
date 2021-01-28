@@ -6,10 +6,11 @@ const { create,
         getById,
         getPersonal,
         getByAlumno,
-        getAllByCarreraAndPeriodoActual,
+        getAllByCarreraAndPeriodoActualAndFechas,
         update,
         updateByAlumno,
-        deleteProyecto} = require('../controllers/proyecto.controller');
+        deleteProyecto,
+        duplicar} = require('../controllers/proyecto.controller');
 const { validarJWT } = require('../middleware/validar-jwt.middleware');
 const router = Router();
 
@@ -19,13 +20,16 @@ router.post('/create/alumno', validarJWT ,createByAlumno)
 
 router.get('/all/:tipo', getAllByTipo)
 
-router.get('/all/carrera/:carrera', getAllByCarreraAndPeriodoActual)
+router.get('/all/carrera/:carrera', getAllByCarreraAndPeriodoActualAndFechas)
 
 router.get('/alumno', validarJWT, getByAlumno)
 
 router.get('/alumno/personal', validarJWT, getPersonal)
 
+router.get('/duplicar/:id', duplicar)
+
 router.get('/:id', getById)
+
 
 router.put('/alumno/:id',validarJWT,  updateByAlumno )
 

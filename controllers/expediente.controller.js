@@ -3,7 +3,7 @@ const { getEstructuraExpediente } = require("../helpers/expediente.helper");
 const Expediente = require("../models/expediente.model");
 const Item = require('../models/item-expediente.model');
 const Alumno = require('../models/alumno.model');
-const Programa = require('../models/programa.model');
+const Solicitud = require('../models/solicitud.model');
 
 const create = async(req, res = response) => {
 
@@ -13,16 +13,7 @@ const create = async(req, res = response) => {
 
         const alumnodb = await Alumno.findById(alumno);
 
-        // Verificar que ya tenga un programa.
-        const programa = await Programa.findOne({alumno});
-
-        if ( !programa ) {
-            return res.status(400).json({
-                status: false,
-                message: `No puedes crear un expediente porque no tienes un programa.`
-            })
-        }
-
+        
         // Verificar que no tenga un expediente ya creado.
         const doesExist = await Expediente.findOne( { alumno } )
 
@@ -33,8 +24,12 @@ const create = async(req, res = response) => {
             })
         }
 
+
+        //Obtener la solicitud aceptada del alumno que contiene el proyecto y su fechas de servicio social
+        const solicitud = await Solicitud.findOne({alumno, aceptado:true});
+
         // Crear el expediente
-        const expediente = new Expediente({alumno, programa});
+        const expediente = new Expediente({alumno, solicitud});
         await expediente.save();
 
         const estructura = getEstructuraExpediente(expediente._id, alumno);

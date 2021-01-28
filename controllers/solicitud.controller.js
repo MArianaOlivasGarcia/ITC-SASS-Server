@@ -1,5 +1,5 @@
 const { response } = require("express");
-const Solicitud = require('../models/solicitud-proyecto.model');
+const Solicitud = require('../models/solicitud.model');
 const Alumno = require('../models/alumno.model');
 
 
@@ -196,7 +196,7 @@ const create = async(req, res = response) => {
     if ( hasRechazado ) {
 
         const data = {
-            proyecto: req.body,
+            ...req.body,
             rechazado: false,
             aceptado: false,
             pendiente: true,
@@ -227,7 +227,7 @@ const create = async(req, res = response) => {
 
     // NO TIENE UNO RECHAZADO ENTONCES CREAR NUEVO
     const data = {
-        proyecto: req.body,
+        ...req.body,
         alumno
     }
 
@@ -249,6 +249,8 @@ const aceptar = async(req, res = response) => {
     const idSolicitud = req.params.id;
     const idUser = req.uid;
 
+    const { inicio_servicio, termino_servicio } = req.body;
+
     try {
 
         const solicitud = await Solicitud.findById(idSolicitud);
@@ -261,7 +263,9 @@ const aceptar = async(req, res = response) => {
         }
 
         const data = {
-            valido: idUser,
+            usuario_reviso: idUser,
+            inicio_servicio,
+            termino_servicio,
             pendiente: false,
             aceptado: true,
             rechazado: false,
@@ -321,7 +325,6 @@ const rechazar = async(req, res = response) => {
             }) 
         }
 
-        console.log( solicitud.aceptado )
         // VERIFICAR QUE NO ESTE ACEPTADA
         if ( solicitud.aceptado ) {
             return res.status(400).json({
@@ -332,7 +335,7 @@ const rechazar = async(req, res = response) => {
 
 
         const data = {
-            valido: idUser,
+            usuario_reviso: idUser,
             error: req.body,
             pendiente: false,
             aceptado: false,
@@ -371,7 +374,6 @@ const rechazar = async(req, res = response) => {
 }
 
 
-
 const getAceptadaByAlumno = async(req, res = response) => {
 
     try {
@@ -402,6 +404,9 @@ const getAceptadaByAlumno = async(req, res = response) => {
     }
 
 }
+
+
+
 
 
 module.exports = {

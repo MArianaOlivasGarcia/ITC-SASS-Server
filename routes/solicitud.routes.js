@@ -11,7 +11,7 @@ router.get('/alumno/aceptado', validarJWT,  getAceptadaByAlumno)
 
 router.get('/:id', getById)
 
-router.post('/', validarJWT, create )
+router.post('/', validarJWT, create ) 
 
 // TOKEN DEL USUARIO NO ALUMNO
 router.put('/aceptar/:id', validarJWT, aceptar)

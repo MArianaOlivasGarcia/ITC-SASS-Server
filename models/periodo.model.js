@@ -1,4 +1,6 @@
 const { Schema, model } = require('mongoose');
+const mongoose = require('mongoose');
+const autoIncrement = require('mongoose-auto-increment');
 
 const PeriodoSchema = Schema({
 
@@ -6,9 +8,13 @@ const PeriodoSchema = Schema({
     fecha_inicio: { type: Date, required: true },
     fecha_termino: { type: Date, required: true },
     isActual: { type: Boolean, default: false },
+    //AutoIncrementable
+    codigo: { type: Number }
 
-}, { collection: 'periodos', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
+}, { collection: 'periodos'});
 
+autoIncrement.initialize(mongoose.connection)
+PeriodoSchema.plugin(autoIncrement.plugin, { model: 'Periodo', field: 'codigo', startAt: 1 } );
 
 
 PeriodoSchema.method('toJSON', function() {
@@ -43,4 +49,4 @@ PeriodoSchema.pre('save', function(next){
     next();
 });
 
-module.exports = model('Periodo', PeriodoSchema)
+module.exports = model('Periodo', PeriodoSchema) 

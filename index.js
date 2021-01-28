@@ -42,7 +42,6 @@ app.use('/api/proyecto', require('./routes/proyecto.routes'));
 app.use('/api/solicitud', require('./routes/solicitud.routes'));
 app.use('/api/carrera', require('./routes/carrera.routes'));
 app.use('/api/periodo', require('./routes/periodo.routes'));
-app.use('/api/programa', require('./routes/programa.routes'));
 app.use('/api/expediente', require('./routes/expediente.routes'));
 app.use('/api/item', require('./routes/item-expediente.routes'));
 app.use('/api/busqueda', require('./routes/busqueda.routes'));

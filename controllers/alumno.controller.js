@@ -1,6 +1,6 @@
 const { response } = require('express');
 const Alumno = require('../models/alumno.model');
-const Item = require('../models/item-expediente.model');
+const Periodo = require('../models/periodo.model');
 const bcrypt = require('bcryptjs');
 const { generarJWT } = require('../helpers/jwt.helper')
 const { getMenuAlumnoFrontEnd } = require('../helpers/menu-frontend.helper');
@@ -10,15 +10,16 @@ const register = async(req, res = response) => {
 
     const { numero_control } = req.body;
     const { fecha_nacimiento } = req.body;
+    const { periodo_ingreso } = req.body;
 
     try {
 
         const anio = fecha_nacimiento.slice(0,4);
         const mes = fecha_nacimiento.slice(5,7);
 
-        const password = `${anio}/${mes}`
+        const password = `${anio}${mes}`
 
-const doesExist = await Alumno.findOne({ numero_control })
+        const doesExist = await Alumno.findOne({ numero_control })
 
         if (doesExist) {
             return res.status(400).json({
@@ -27,7 +28,20 @@ const doesExist = await Alumno.findOne({ numero_control })
             })
         }
 
-        const alumno = new Alumno(req.body)
+        // calcular semestre
+        const periodoActual = await Periodo.findOne({isActual:true});
+        const periodoIngreso = await Periodo.findById( periodo_ingreso );
+      
+        const semestre = (periodoActual.codigo - periodoIngreso.codigo)+1;
+        
+
+        const data = {
+            ...req.body,
+            semestre
+        }
+        
+
+        const alumno = new Alumno(data)
 
         // ** Encriptar contraseña **//
         const salt = bcrypt.genSaltSync();
@@ -35,14 +49,11 @@ const doesExist = await Alumno.findOne({ numero_control })
 
         const savedAlumno = await alumno.save();
 
-        //** Generar Token **/
-        const token = await generarJWT(savedAlumno.id);
 
         res.status(201).json({
             status: true,
             message: `Alumno creado con éxito`,
-            alumno: savedAlumno,
-            accessToken: token
+            alumno: savedAlumno
         })
 
     } catch (error) {
@@ -113,7 +124,7 @@ const renovarJWT = async(req, res = response) => {
 
     const user = await Alumno.findById(uid)
                         .populate('carrera')
-                        .populate('periodo')
+                        .populate('periodo_ingreso')
                         .populate('proyecto')
                         .populate({
                             path: 'proyecto',
@@ -121,11 +132,6 @@ const renovarJWT = async(req, res = response) => {
                         })
                         .populate('expediente')
 
-
-    if ( user.expediente ) {
-        const items = await Item.find({expediente: user.expediente })
-        user.expediente.items = items;
-    }
 
     res.json({
         status: true,
@@ -145,7 +151,7 @@ const getAll = async(req, res = response) => {
     try {
 
         const [alumnos, total] = await Promise.all([
-            Alumno.find({}).populate('carrera').skip(desde).limit(5),
+            Alumno.find({}).populate('carrera').populate('expediente').skip(desde).limit(5),
             Alumno.countDocuments()
         ]);
 

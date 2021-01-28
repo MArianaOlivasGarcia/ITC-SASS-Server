@@ -8,7 +8,6 @@ const Docxtemplater = require('docxtemplater')
 
 const Periodo = require('../models/periodo.model');
 const Alumno = require('../models/alumno.model');
-const Programa = require('../models/programa.model');
 const Item = require('../models/item-expediente.model');
 
 
@@ -17,9 +16,8 @@ const generateFile = async(req, res = response) => {
     const uid = req.uid;
     const idItem = req.params.idItem;
 
-    const [alumno, programa, periodoActual, item] = await Promise.all([
+    const [alumno, periodoActual, item] = await Promise.all([
         Alumno.findById(uid).populate('carrera').populate('periodo'),
-        Programa.findOne({alumno:uid}).populate('proyecto'),
         Periodo.findOne({isActual:true}),
         Item.findById(idItem)
     ]) 
@@ -40,7 +38,6 @@ const generateFile = async(req, res = response) => {
   
     const data = {
         alumno: alumno.toJSON(),
-        programa: programa.toJSON(),
         periodo: periodoActual.toJSON()
     }
 

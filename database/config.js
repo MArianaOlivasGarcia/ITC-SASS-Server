@@ -1,18 +1,23 @@
 const mongoose = require('mongoose');
-
+/* const autoIncrement = require('mongoose-auto-increment');
+ */
 const dbConnection = async() => {
 
     try {
 
         console.log('init db config');
 
-        await mongoose.connect(process.env.DB_CNN, {
+        
+        /* const connection =  */await mongoose.connect(process.env.DB_CNN, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
             useCreateIndex: true,
             useFindAndModify: false
         });
 
+
+/*         autoIncrement.initialize(connection)
+ */
         console.log('Base de datos Online');
 
     } catch (error) {

@@ -21,6 +21,7 @@
     "libreoffice-convert-win": "^1.1.1",
     "moment": "^2.29.1",
     "mongoose": "^5.10.14",
+    "mongoose-auto-increment": "^5.0.1",
     "morgan": "^1.10.0",
     "nodemon": "^2.0.6",
     "office-converter": "^1.0.2",

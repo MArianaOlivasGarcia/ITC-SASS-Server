@@ -1,5 +1,6 @@
 const { Schema, model, Types } = require('mongoose');
 
+
 const AlumnoSchema = Schema({
     /* =============
     == REQUERIDOS 
@@ -11,12 +12,12 @@ const AlumnoSchema = Schema({
     fecha_nacimiento: { type: Date, required: true },
     numero_control: { type: String, required: true, unique: true },
     carrera: { type: Types.ObjectId, ref: 'Carrera', required: true },
-    semestre: { type: Number, required: true },
     creditos_acumulados: { type: Number, required: true },
+    periodo_ingreso: { type: Types.ObjectId, ref: 'Periodo' },
     /* =============
     == FIN REQUERIDOS 
     ================*/
-
+    
     email: { type: String },
     telefono: { type: String },
     domicilio: { type: String },
@@ -24,7 +25,7 @@ const AlumnoSchema = Schema({
     edad: { type: Number },
     porcentaje_avance: { type: Number },
     
-    periodo: { type: Types.ObjectId, ref: 'Periodo' },
+    semestre: { type: Number },
     firma: { type: String }, 
     foto: { type: String },
     password: { type: String, required: true },
@@ -38,11 +39,11 @@ const AlumnoSchema = Schema({
     terminos: { type: Boolean, default: false },
     online: { type: Boolean, default: false }
 
-}, { collection: 'alumnos', timestamps: { createdAt: 'created_at' } });
+}, { collection: 'alumnos' });
 
 
 AlumnoSchema.method('toJSON', function() {
-    const { __v, password, created_at, updatedAt, fecha_nacimiento, ...object } = this.toObject(); 
+    const { __v, password, fecha_nacimiento, ...object } = this.toObject(); 
     const bDate = new Date(fecha_nacimiento);
     object.fecha_nacimiento =  bDate.toISOString().substring(0,10);
     return object;
@@ -61,14 +62,16 @@ AlumnoSchema.pre('save', function(next){
     }
     
     this.edad = edad;
-    // Fin Calcular Edad
+    // FIN Calcular Edad
+
 
 
     // Calcular % Avance
     let porcentaje = ( this.creditos_acumulados * 100 ) / 260;
     let t = porcentaje.toString();
     this.porcentaje_avance = t.match(/(\d*.\d{0,2})/)[0];
-    // Fin Calcular % Avance
+    // FIN Calcular % Avance
+
     
     next();
 });

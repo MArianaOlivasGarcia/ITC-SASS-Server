@@ -1,11 +1,10 @@
 const { Schema, model, Types } = require('mongoose');
 
-
-
 const ItemExpedienteSchema = Schema({
     
     alumno: { type: Types.ObjectId, ref:'Alumno', required: true},
 
+    // AutoIncrementable
     numero: { type: Number },
 
     expediente: { type: Types.ObjectId, ref:'Expediente', required: true},
@@ -54,7 +53,7 @@ const ItemExpedienteSchema = Schema({
     valido: { type: Types.ObjectId, ref:'Usuario' },
 
 
-}, { collection: 'items', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
+}, { collection: 'items'});
 
 
 

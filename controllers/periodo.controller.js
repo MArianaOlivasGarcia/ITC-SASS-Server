@@ -7,7 +7,7 @@ const Periodo = require("../models/periodo.model");
 const getAll = async(req, res = response) => {
 
     try {
-        const periodos = await Periodo.find({})
+        const periodos = await Periodo.find({}).sort({codigo: -1})
 
         res.status(200).json({
             status: true,
@@ -36,7 +36,7 @@ const getAllPaginados = async(req, res = response) => {
         const desde = Number(req.query.desde) || 0;
 
         const [periodos, total] = await Promise.all([
-            Periodo.find({}).skip(desde).limit(5),
+            Periodo.find({}).skip(desde).limit(5).sort({codigo: -1}),
             Periodo.countDocuments({})
         ]);
 
@@ -65,20 +65,25 @@ const create = async(req, res = response) => {
     // YYYY/MM/DD
     const { isActual } = req.body;
 
+    /* if ( !isActual ){
+        const 
+    } */
+    const existActual = await Periodo.findOne({isActual:true});
 
-    // Si el periodo es actual, cambiar el que actualimente isActual a false
-    if ( isActual ) {
-
-        // Si hay uno actual
-        const existActual = await Periodo.findOne({isActual:true});
-
-        if( existActual ) {
-            existActual.isActual = false;
-            await existActual.save();
-        }
-
-
+    if( !isActual && !existActual){
+        return res.status(400).json({
+            status: false,
+            message: 'Almenos debe de existir un periodo actual.'
+        })
     }
+    
+    // Si el periodo es actual, cambiar el que actualimente isActual a false
+    if ( isActual && existActual) {
+        
+        existActual.isActual = false;
+        await existActual.save();
+
+    } 
 
     // No es asignado como periodo actual, simplemente crearlo
     const periodo = new Periodo(req.body);

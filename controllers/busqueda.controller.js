@@ -4,6 +4,7 @@ const Alumno = require('../models/alumno.model')
 const Dependencia = require('../models/dependencia.model')
 const Proyecto = require('../models/proyecto.model')
 const Carrera = require('../models/carrera.model')
+const Solicitud = require('../models/solicitud.model')
 
 const getTodo = async(req, res = response) => {
 
@@ -74,11 +75,15 @@ const getColeccion = async(req, res = response) => {
             data = await Carrera.find( {nombre: regex} )
         break;
 
+        case 'solicitudes':
+            
+        break;
+
 
         default:
             return res.status(400).json({
                 status: false,
-                message: 'Las colecciones permitidas son usuarios, alumnos, dependencias o proyectos'
+                message: 'Las colecciones permitidas son usuarios, alumnos, dependencias, proyectos o solicitudes.'
             })
 
     }
