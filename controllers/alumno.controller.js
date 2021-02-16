@@ -4,6 +4,7 @@ const Periodo = require('../models/periodo.model');
 const bcrypt = require('bcryptjs');
 const { generarJWT } = require('../helpers/jwt.helper')
 const { getMenuAlumnoFrontEnd } = require('../helpers/menu-frontend.helper');
+const Proyecto = require('../models/proyecto.model');
 
 
 const register = async(req, res = response) => {
@@ -201,6 +202,38 @@ const getAllByCarrera = async(req, res = response) => {
 }
 
 
+const getAllByProyecto = async(req, res = response) => {
+
+    const proyectoId = req.params.proyecto;
+    const desde = Number(req.query.desde) || 0;
+
+    try {
+
+        const [proyecto, alumnos, total] = await Promise.all([
+            Proyecto.findById( proyectoId ).populate('periodo', 'nombre').populate('dependencia'),
+            Alumno.find({ proyecto:proyectoId }).populate('carrera').skip(desde).limit(5),
+            Alumno.countDocuments({ proyecto:proyectoId })
+        ]);
+
+        res.status(200).json({
+            status: true,
+            proyecto,
+            alumnos,
+            total
+        })
+
+    } catch (error) {
+
+        return res.status(500).json({
+            status: true,
+            message: 'Hable con el administrador'
+        })
+
+    }
+
+
+}
+
 
 const getById = async(req, res = response) => {
 
@@ -396,6 +429,7 @@ module.exports = {
     renovarJWT,
     getAll,
     getAllByCarrera,
+    getAllByProyecto,
     getById,
     update,
     changePassword,

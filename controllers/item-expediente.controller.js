@@ -1,7 +1,7 @@
 const { response } = require("express");
 const Item = require('../models/item-expediente.model');
 const Alumno = require('../models/alumno.model');
-
+const Usuario = require('../models/usuario.model')
 
 const getById = async(req, res = response) => {
 
@@ -41,43 +41,6 @@ const getById = async(req, res = response) => {
 }
 
 
-const getAllByCodigo = async(req, res = response) => {
-
-    const codigo = req.params.codigo;
-
-    const [aprobados, rechazados, pendientes] = await Promise.all([
-        Item.find({codigo, arpobado: true}),
-        Item.find({codigo, rechazado: true}),
-        Item.find({codigo, revision: true})
-    ])
-
-
-    for (let i = 0; i < pendientes.length; i++) {
-        const pendiente = pendientes[i];
-        const alumno = await Alumno.findOne({expediente: pendiente.expediente});
-        pendiente.alumno = alumno;
-    }
-
-    for (let i = 0; i < aprobados.length; i++) {
-        const aprobado = aprobados[i];
-        const alumno = await Alumno.findOne({expediente: aprobado.expediente});
-        aprobado.alumno = alumno;
-    }
-
-    for (let i = 0; i < rechazados.length; i++) {
-        const rechazado = rechazados[i];
-        const alumno = await Alumno.findOne({expediente: rechazado.expediente});
-        rechazado.alumno = alumno;
-    }
-
-    res.status(200).json({
-        aprobados,
-        rechazados,
-        pendientes
-    })
-
-}
-
 
 const getByStatusAndCodigo = async(req, res = response) => {
 
@@ -85,60 +48,142 @@ const getByStatusAndCodigo = async(req, res = response) => {
     const codigo = req.params.codigo;
     const desde = Number(req.query.desde) || 0;
 
+    const idUser = req.uid; 
+
    try {
+ 
+        const usuario = await Usuario.findById(idUser)
+                            .populate('gestion')
 
-        let items = []; 
-        let total;
-        switch( status ) {
+        if( usuario.gestion.nombre == 'TODAS' ) {
 
-            case 'pendiente': 
-                [items, total] = await Promise.all([
-                                            Item.find({pendiente: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
-                                                                .populate('alumno')
-                                                                .populate({
-                                                                    path: 'alumno',
-                                                                    populate: { path: 'carrera'}
-                                                                }),
-                                            Item.countDocuments({pendiente: true, codigo})
-                                        ]);
-            break;
+            let items = []; 
+            let total;
+            switch( status ) {
 
-            case 'aceptado':
-                [items, total] = await Promise.all([
-                                            Item.find({aceptado: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
-                                                                .populate('alumno')
-                                                                .populate({
-                                                                    path: 'alumno',
-                                                                    populate: { path: 'carrera'}
-                                                                }),
-                                            Item.countDocuments({aceptado: true, codigo})
-                                        ]);
-            break;
+                case 'pendiente': 
+                    [items, total] = await Promise.all([
+                                                Item.find({pendiente: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
+                                                                    .populate('alumno')
+                                                                    .populate({
+                                                                        path: 'alumno',
+                                                                        populate: { path: 'carrera'}
+                                                                    }),
+                                                Item.countDocuments({pendiente: true, codigo})
+                                            ]);
+                break;
 
-            case 'rechazado':
-                [items, total] = await Promise.all([
-                                            Item.find({rechazado: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
-                                                                .populate('alumno')
-                                                                .populate({
-                                                                    path: 'alumno',
-                                                                    populate: { path: 'carrera'}
-                                                                }),
-                                            Item.countDocuments({rechazado: true, codigo})
-                                        ]);
-            break;
-        
-            default:
-                return res.status(400).json({
-                    status: false,
-                    message: 'Los estados permitidos son pendiente, aceptado, rechazado'
-                })
+                case 'aceptado':
+                    [items, total] = await Promise.all([
+                                                Item.find({aceptado: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
+                                                                    .populate('alumno')
+                                                                    .populate({
+                                                                        path: 'alumno',
+                                                                        populate: { path: 'carrera'}
+                                                                    }),
+                                                Item.countDocuments({aceptado: true, codigo})
+                                            ]);
+                break;
+
+                case 'rechazado':
+                    [items, total] = await Promise.all([
+                                                Item.find({rechazado: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
+                                                                    .populate('alumno')
+                                                                    .populate({
+                                                                        path: 'alumno',
+                                                                        populate: { path: 'carrera'}
+                                                                    }),
+                                                Item.countDocuments({rechazado: true, codigo})
+                                            ]);
+                break;
+                                        
+                default:
+                    return res.status(400).json({
+                        status: false,
+                        message: 'Los estados permitidos son pendiente, aceptado, rechazado'
+                    })
+            }
+
+            res.json({
+                status: true,
+                items,
+                total
+            })
+
+        } else {
+            let items = []; 
+            let itemsTemp = [];
+            let total;
+            switch( status ) {
+
+                case 'pendiente': 
+                    itemsTemp = await Item.find({pendiente: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
+                                                                    .populate('alumno')
+                                                                    .populate({
+                                                                        path: 'alumno',
+                                                                        populate: { path: 'carrera'}
+                                                                    });
+                    items = itemsTemp.filter( item => {
+                        const { gestion } = usuario;
+                        const { carrera } = item.alumno;
+
+                        return gestion._id == carrera._id.toString();
+                    })
+
+                    total = items.length;
+
+                break;
+
+                case 'aceptado':
+                    itemsTemp = await Item.find({aceptado: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
+                                                                    .populate('alumno')
+                                                                    .populate({
+                                                                        path: 'alumno',
+                                                                        populate: { path: 'carrera'}
+                                                                    });
+                    items = itemsTemp.filter( item => {
+                        const { gestion } = usuario;
+                        const { carrera } = item.alumno;
+                        
+                        return gestion._id == carrera._id.toString();
+                    })
+                        
+                    total = items.length;
+                break;
+
+                case 'rechazado':
+                    itemsTemp = await Item.find({rechazado: true, codigo})/* .sort('create_at') */.skip(desde).limit(5)
+                                                                    .populate('alumno')
+                                                                    .populate({
+                                                                        path: 'alumno',
+                                                                        populate: { path: 'carrera'}
+                                                                    });
+
+                    items = itemsTemp.filter( item => {
+                        const { gestion } = usuario;
+                        const { carrera } = item.alumno;
+                                                
+                        return gestion._id == carrera._id.toString();
+                    })
+                                                
+                    total = items.length;
+
+                break;
+                                        
+                default:
+                    return res.status(400).json({
+                        status: false,
+                        message: 'Los estados permitidos son pendiente, aceptado, rechazado'
+                    })
+            }
+
+            res.json({
+                status: true,
+                items,
+                total
+            })
         }
-
-        res.json({
-            status: true,
-            items,
-            total
-        })
+        
     
 
     } catch (error) {
@@ -178,7 +223,7 @@ const aceptar = async(req, res = response) => {
             rechazado: false,
             error: undefined,
             terminado: true
-         }
+        }
 
         const itemActualizado = await Item.findByIdAndUpdate(idItem, data, {new:true} )
             .populate('alumno')
@@ -257,7 +302,7 @@ const rechazar = async(req, res = response) => {
         
         res.json({
             status: true,
-            message: 'El archivo ha sido rechazada.',
+            message: 'El archivo ha sido rechazado.',
             item: itemActualizado
         })
 

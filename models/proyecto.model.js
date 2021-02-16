@@ -7,6 +7,7 @@ const ProyectoSchema = Schema({
     dependencia: { type: Types.ObjectId, ref: 'Dependencia', required: true },
     objetivo: { type: String },
     actividades: { type: String },
+    tipo_actividades: { type: String },
     periodo: { type: Types.ObjectId, ref: 'Periodo' },
     lugar_desempeno: { type: String }, 
     modalidad: { type: String, default: 'Público' },
@@ -15,30 +16,34 @@ const ProyectoSchema = Schema({
     apoyo_economico: { type: Boolean, default: false },
     responsable: { type: String  },
     puesto_responsable: { type: String },
+    instalacion: { type: Boolean, default: false },
     
     carreras: [{
         cantidad: {type: Number},
         carrera: {type: Types.ObjectId, ref: 'Carrera'}
     }],
     // En las que puede postularse a este proyecto
-    fecha_inicial: { type: Date },
-    fecha_limite: { type: Date },
+    /* fecha_inicial: { type: Date },
+    fecha_limite: { type: Date }, */
 
     publico: { type: Boolean, default: true  },
-    alumno: { type: Types.ObjectId, ref: 'Alumno'}
+    alumno: { type: Types.ObjectId, ref: 'Alumno'},
+
+    // 
+    adoptado: { type: Boolean },
 
 }, { collection: 'proyectos'});
 
 ProyectoSchema.method('toJSON', function() {
     const { __v, fecha_inicial, fecha_limite,...object } = this.toObject();
     
-    if ( !fecha_inicial && !fecha_limite ) { return object; }
+    /* if ( !fecha_inicial && !fecha_limite ) { return object; }
 
     const iDate = new Date(fecha_inicial);
     const fDate = new Date(fecha_limite);
 
     object.fecha_inicial = iDate.toISOString().substring(0,10);
-    object.fecha_limite = fDate.toISOString().substring(0,10);
+    object.fecha_limite = fDate.toISOString().substring(0,10); */
 
     return object;
 })
@@ -49,6 +54,7 @@ ProyectoSchema.pre('save', function(next){
     if ( this.alumno ) {
         this.publico = false;
     }
+
 
     next();
 });

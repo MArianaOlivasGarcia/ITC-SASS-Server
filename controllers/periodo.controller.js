@@ -63,11 +63,15 @@ const create = async(req, res = response) => {
 
     // 2020/01/03
     // YYYY/MM/DD
-    const { isActual } = req.body;
+    const { isActual, isProximo } = req.body;
 
-    /* if ( !isActual ){
-        const 
-    } */
+    if ( isActual && isProximo ) {
+        return res.status(400).json({
+            status: false,
+            message: 'No es posible asignar un proyecto como actual y próximo.'
+        })
+    }
+
     const existActual = await Periodo.findOne({isActual:true});
 
     if( !isActual && !existActual){
@@ -76,16 +80,20 @@ const create = async(req, res = response) => {
             message: 'Almenos debe de existir un periodo actual.'
         })
     }
-    
+
     // Si el periodo es actual, cambiar el que actualimente isActual a false
     if ( isActual && existActual) {
-        
         existActual.isActual = false;
         await existActual.save();
-
     } 
 
-    // No es asignado como periodo actual, simplemente crearlo
+    const existProximo = await Periodo.findOne({isProximo:true});
+
+    if( isProximo && existProximo ) {
+        existProximo.isProximo = false;
+        await existProximo.save();
+    }
+
     const periodo = new Periodo(req.body);
 
     await periodo.save();
@@ -102,17 +110,30 @@ const create = async(req, res = response) => {
 const upadate = async(req, res = response) => {
     
     const id = req.params.id
-    const { isActual } = req.body;
+    const { isActual, isProximo } = req.body;
 
     try {
+        if ( isActual && isProximo ) {
+            return res.status(400).json({
+                status: false,
+                message: 'No es posible asignar un proyecto como actual y próximo.'
+            })
+        }
 
         // Si el periodo es actual, cambiar el que actualimente isActual a false
         if ( isActual ) {
-            console.log('Quitar')
             // Si hay uno actual
             const existActual = await Periodo.findOne({isActual:true});
             existActual.isActual = false;
             await existActual.save();
+
+        }
+
+        const existProximo = await Periodo.findOne({isProximo:true});
+        if ( isProximo && existProximo) {
+            // Si hay uno actual
+            existProximo.isProximo = false;
+            await existProximo.save();
 
         }
 

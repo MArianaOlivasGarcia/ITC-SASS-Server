@@ -5,6 +5,7 @@ const fs = require('fs');
 
 const Alumno = require("../models/alumno.model");
 const Usuario = require("../models/usuario.model");
+const Aviso = require("../models/aviso.model");
 
 
 const imageUpload = async( req, res = response ) => {
@@ -12,7 +13,7 @@ const imageUpload = async( req, res = response ) => {
     const coleccion = req.params.coleccion;
     const id = req.params.id
 
-    const coleccionesValidas = ['usuarios', 'alumnos'];
+    const coleccionesValidas = ['usuarios', 'alumnos', 'avisos'];
 
     if ( !coleccionesValidas.includes( coleccion ) ){
         return res.status(400).json({
@@ -53,7 +54,7 @@ const imageUpload = async( req, res = response ) => {
     
 
     //***** Actualizar la imagen */
-    const model = coleccion === 'alumnos' ? Alumno : coleccion === 'usuarios' ? Usuario : null  
+    const model = coleccion === 'alumnos' ? Alumno : coleccion === 'usuarios' ? Usuario : coleccion === 'avisos' ? Aviso : null  
 
 
     const currentColleccion = await model.findById( id );      

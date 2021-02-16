@@ -118,6 +118,7 @@ const getEstructuraExpediente = ( idExpediete, idAlumno ) => {
 }
 
 
+
 module.exports = {
   getEstructuraExpediente
 }

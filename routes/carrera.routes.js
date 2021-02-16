@@ -6,7 +6,7 @@ const router = Router();
 
 router.get('/all', getAll)
 
-router.get('/all/paginados', getAllPaginados )
+router.get('/all/paginados', getAllPaginados)
 
 router.get('/:id', getById)
 

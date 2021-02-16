@@ -23,14 +23,13 @@ const getMenuFrontEnd = ( role = 'USER_ROLE' ) => {
         {
           titulo: 'SOLICITUDES',
           submenu: [
-            { titulo: 'Proyectos', icono: 'fas fa-briefcase mr-2', url: 'solicitudes' }
+            { titulo: 'Servicio Social', icono: 'fas fa-people-carry mr-2', url: 'solicitudes' }
           ]
         },
         {
           titulo: 'DOCUMENTOS',
           submenu: [
-            { titulo: 'Solicitud de Servicio Social', icono: 'fas fa-file-alt mr-2', url: 'documentos/ITC-VI-PO-002-02' },
-            { titulo: 'Carta de Asignación de Servicio Social', icono: 'fas fa-file-alt mr-2', url: 'documentos/ITC-VI-PO-002-03' }
+            { titulo: 'Documentos', icono: 'fas fa-file-alt mr-2', url: 'documentos' }
           ]
         }
       ];
@@ -55,7 +54,7 @@ const getMenuFrontEnd = ( role = 'USER_ROLE' ) => {
 const getSubMenuFrontEnd = ( role = 'USER_ROLE' ) => {
 
   const submenu = [
-    { titulo: 'Mi perfil', icono: 'fas fa-comments mr-2', url: 'mensajes' },
+    { titulo: 'Mi perfil', icono: 'fas fa-user-alt mr-2', url: 'perfil' },
 /*  { titulo: 'Ajustes', icono: 'fas fa-cogs mr-2', url: 'ajustes' }, */
     
   ];
@@ -80,6 +79,7 @@ const getMenuAlumnoFrontEnd = () => {
       submenu: [
         { titulo: 'Mi perfil', icono: 'fas fa-user-graduate mr-2', url: 'perfil' },
         { titulo: 'Banco de Proyectos', icono: 'fas fa-briefcase mr-2', url: 'proyectos' },
+        { titulo: 'Proyecto Personal', icono: 'fas fa-pencil-ruler mr-2', url: 'proyecto-personal' },
         { titulo: 'Mi expediente', icono: 'fas fa-book mr-2', url: 'expediente' },
         { titulo: 'Avisos', icono: 'fas fa-newspaper mr-2', url: 'avisos' },
         { titulo: 'Mensajes', icono: 'fas fa-comments mr-2', url: 'mensajes' },

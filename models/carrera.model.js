@@ -4,7 +4,7 @@ const CarreraSchema = Schema({
 
     nombre: { type: String, required: true },
 
-}, { collection: 'carreras', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
+}, { collection: 'carreras'} );
 
 CarreraSchema.method('toJSON', function() {
     const { __v, created_at, updated_at, ...object } = this.toObject();

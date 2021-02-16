@@ -4,7 +4,7 @@ const { validarJWT } = require('../middleware/validar-jwt.middleware');
 
 const router = Router();
 
-router.get('/all/:status/:codigo', getByStatusAndCodigo)
+router.get('/all/:status/:codigo', validarJWT ,getByStatusAndCodigo)
 
 router.get('/:id', getById );
 

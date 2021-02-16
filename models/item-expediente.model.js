@@ -58,8 +58,12 @@ const ItemExpedienteSchema = Schema({
 
 
 ItemExpedienteSchema.method('toJSON', function() {
-    const { __v, updated_at, ...object } = this.toObject();
+    const { __v, updated_at, fecha_limite, ...object } = this.toObject();
+
+    const bDate = new Date(fecha_limite);
+    object.fecha_limite =  bDate.toISOString().substring(0,10);
+
     return object;
-})
+}) 
 
 module.exports = model('Item', ItemExpedienteSchema)

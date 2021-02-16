@@ -1,45 +1,29 @@
 const { Router, response } = require('express');
 const router = Router();
 
-const Alumno = require('../models/alumno.model');
+const libre = require('libreoffice-convert');
 
-const {crearArchivo} = require('../tests/test')
+const path = require('path');
+const fs = require('fs');
 
 
 router.post('/test/:id', async(req, res = response) => {
 
-    try {
-        const uid = req.params.id;
-
-        const alumno = await Alumno.findById(uid)
-                                .populate('carrera')
-
-        if( !alumno ) {
-            return res.status(404).json({
-                status: false,
-                message: 'No existe un alumno con ese id'
-            })
+    const extend = '.pdf'
+    const enterPath = path.join(__dirname, '/ITC-VI-PO-002-02.docx');
+    const outputPath = path.join(__dirname, `/example${extend}`);
+    
+    // Read file
+    const file = fs.readFileSync(enterPath);
+    // Convert it to pdf format with undefined filter (see Libreoffice doc about filter)
+    libre.convert(file, extend, undefined, (err, done) => {
+        if (err) {
+          console.log(`Error converting file: ${err}`);
         }
-
-        const data = {
-            alumno: alumno.toJSON(),
-        }
-
-        await crearArchivo( 'ITC-VI-PO-002-02.docx', data , 'ITC-VI-PO-002-02 Mariana.docx' )
         
-        res.status(200).json({
-            status: true,
-            message: 'Archivo creado con éxito',
-            alumno
-        })
-
-    } catch( error ){
-        console.log(error);
-        return res.status(600).json({
-            status: true,
-            message: 'Hable con el administrador'
-        })
-    }
+        // Here in done you have pdf file which you can save or transfer in another stream
+        fs.writeFileSync(outputPath, done);
+    });
 
 })
 

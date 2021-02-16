@@ -9,10 +9,10 @@ const { Types } = require('mongoose');
 
 const create = async(req, res = response) => {
 
-    const { carreras  } = req.body;
+    const { carreras, ...obj } = req.body;
 
     const proyecto = new Proyecto(req.body);
-    const proyectoSaved = await proyecto.save(); 
+    await proyecto.save(); 
 
     // Crear los items de la carrera
     if ( carreras ) {
@@ -21,7 +21,7 @@ const create = async(req, res = response) => {
             
             const data = {
                 ...carrera,
-                proyecto: proyectoSaved
+                proyecto
             }
 
             const itemCarrera = new ItemCarrera(data);
@@ -34,7 +34,7 @@ const create = async(req, res = response) => {
 
     res.status(201).json({
         status: true,
-        proyecto: proyectoSaved
+        proyecto
     })
 
 }
@@ -43,7 +43,8 @@ const create = async(req, res = response) => {
 const createByAlumno = async(req, res = response ) => {
 
     const id = req.uid;
-    const { proyecto, ...obj } = req.body;
+    const {proyecto} = req.body;
+    
     
     try {
 
@@ -66,35 +67,102 @@ const createByAlumno = async(req, res = response ) => {
             })
         }
 
-        // Obtener el periodo actual
-        const periodoActual = await Periodo.findOne({isActual: true});
-
-        if ( !periodoActual ) {
+        const [existeSolicitud, periodoProximo] = await  Promise.all([
+            Solicitud.findOne({alumno}),
+            Periodo.findOne({isProximo: true})
+        ])
+        
+        if ( !periodoProximo ) {
             return res.status(404).json({
                 status: false,
-                message: 'No hay un periodo actual.'
+                message: 'No hay un periodo próximo.'
             })
         }
 
-        const proyectoNew = new Proyecto({
-            ...proyecto,
-            periodo: periodoActual,
-            alumno
-        });
-        await proyectoNew.save() 
+        // VALIDAR LAS FECHAS DE RECEPCION DE SOLICITUDES
+        const hoy = Date.now();
+        const { fecha_inicio, fecha_termino } = periodoProximo.recepcion_solicitudes
+        const fi = new Date(fecha_inicio).getTime();
+        const ft = new Date(fecha_termino).getTime();
         
-        const solicitud = new Solicitud({
-            alumno,
-            proyecto: proyectoNew,
-            ...obj
-        })
+        if ( hoy < fi  ){
+            return res.status(400).json({
+                status: false,
+                message: `Aun no es fecha de recepción de solicitudes de servicio social para el periodo ${periodoProximo.nombre}.`
+            })
+        } else if ( hoy > ft ){
+            return res.status(400).json({
+                status: false,
+                message: `La recepción de solicitudes de servicio social para el periodo ${periodoProximo.nombre} ya vencio.`
+            })
+        }
+        
+        if ( !existeSolicitud ) {
 
-        await solicitud.save();
+            const proyectoNew = new Proyecto({
+                ...proyecto,
+                periodo: periodoProximo,
+                alumno
+            });
+            await proyectoNew.save() 
+
+            const solicitud = new Solicitud({
+                alumno,
+                proyecto: proyectoNew,
+            })
+
+            await solicitud.save();
+        
+            return res.status(201).json({
+                status: true,
+                proyecto: proyectoNew
+            })
+
+        }
+
+        if ( existeSolicitud.pendiente ) {
+            return res.status(400).json({
+                status: false,
+                message: 'Ya tienes una solicitud pendiente.'
+            })
+        }
+
+        if ( existeSolicitud.aceptado ) {
+            return res.status(400).json({
+                status: false,
+                message: 'Ya tienes una solicitud aprobada.'
+            })
+        }
+
+        if ( existeSolicitud.rechazado ) {
+
+            const proyectoNew = new Proyecto({
+                ...proyecto,
+                periodo: periodoProximo,
+                alumno,
+            });
+            await proyectoNew.save() 
+
+            const data = {
+                alumno,
+                proyecto: proyectoNew,
+                rechazado: false,
+                aceptado: false,
+                pendiente: true,
+                error: undefined,
+                fecha_solicitud: Date.now(),
+                fecha_validacion: undefined
+            }
+            
+            await Solicitud.findByIdAndUpdate( existeSolicitud._id, data, {new:true});
+            
+        
+            res.status(201).json({
+                status: true,
+                proyecto: proyectoNew
+            })
+        }
  
-        res.status(201).json({
-            status: true,
-            proyecto: proyectoNew
-        })
 
     } catch (error) {
         console.log(error);
@@ -130,11 +198,28 @@ const getAllByTipo = async(req, res = response) => {
             break;
 
             // Creados por alumnos
-            case 'privado':
+           /*  case 'privado':
                 [proyectos, total] = await Promise.all([
                     Proyecto.find({publico:false}).populate('dependencia').populate('periodo').skip(desde).limit(5),
                     Proyecto.countDocuments({publico:false})
                 ]);
+            break; */
+             case 'privado':
+                const solicitudes = await Solicitud.find({aceptado:true})
+                                                .skip(desde).limit(5)
+                                                .populate('proyecto')
+                                                .populate({
+                                                    path: 'proyecto',
+                                                    populate: { path: 'dependencia' }
+                                                })
+                                                .populate({
+                                                    path: 'proyecto',
+                                                    populate: { path: 'periodo' }
+                                                })
+                
+                proyectos = solicitudes.map( solicitud => solicitud.proyecto );
+                total = proyectos.length;
+
             break;
 
 
@@ -210,7 +295,7 @@ const getById = async(req, res = response) => {
 }
 
 
-const getAllByCarreraAndPeriodoActualAndFechas = async(req, res = response) => {
+const getAllByCarreraAndPeriodoProximoAndFechas = async(req, res = response) => {
 
     const carrera = req.params.carrera
     const desde = Number(req.query.desde) || 0;
@@ -218,23 +303,24 @@ const getAllByCarreraAndPeriodoActualAndFechas = async(req, res = response) => {
     try {
 
 
-        const periodoActual = await Periodo.findOne({isActual: true})
+        const periodoProximo = await Periodo.findOne({isProximo: true})
 
-        if ( !periodoActual ) {
+        if ( !periodoProximo ) {
             return res.status(404).json({
                 status: false,
-                message: 'No hay un periodo actual.'
+                message: 'No hay un periodo proximo.'
             })
         }
     
-        const hoy = new Date();
- 
+/*         const hoy = new Date();
+ */ 
         const [proyectos, total] = await Promise.all([
             Proyecto.find({ 'carreras.carrera': carrera,
+                            'carreras.cantidad': { $gt: 0 },
                             publico: true, 
-                            periodo:periodoActual,
-                            fecha_limite: { $gte: hoy },
-                            fecha_inicial: { $lte: hoy } })
+                            periodo: periodoProximo,
+                            /* fecha_limite: { $gte: hoy },
+                            fecha_inicial: { $lte: hoy }  */})
                 .skip(desde)
                 .limit(5)
                 .populate('dependencia') 
@@ -243,7 +329,12 @@ const getAllByCarreraAndPeriodoActualAndFechas = async(req, res = response) => {
                     path: 'carreras',
                     populate: { path: 'carrera'}
                 }),
-            Proyecto.countDocuments({ 'carreras.carrera': carrera })
+            Proyecto.countDocuments({ 'carreras.carrera': carrera,
+                                      'carreras.cantidad': { $gt: 0 },
+                                      publico: true, 
+                                      periodo: periodoProximo,
+                                      /* fecha_limite: { $gte: hoy },
+                                      fecha_inicial: { $lte: hoy }  */})
         ]);
 
         res.status(200).json({
@@ -378,7 +469,7 @@ const updateByAlumno = async(req, res = response) => {
             })
         }
 
-        if ( !proyectoDb.alumno == alumno ) {
+        if ( !proyectoDb.alumno == alumno  && proyectoDb.publico ) {
             return res.status(400).json({
                 status: false,
                 message: `No puedes editar un proyecto que no es tuyo.`
@@ -471,48 +562,6 @@ const deleteProyecto = async(req, res = response)  => {
 }
 
 
-const getPersonal = async(req, res = response) => {
-
-    const id = req.uid;
-
-    try {
-
-        const proyecto = await Proyecto.findOne({alumno: id })
-                                            .populate('dependencia')
-
-        if ( !proyecto ) {
-            return res.status(200).json({
-                status: true,
-                message: 'No tienes un proyecto personal'
-            })
-        }
-
-        const solicitud = await Solicitud.findOne({alumno: id, proyecto})
-                                        .populate('proyecto')
-                                        .populate({
-                                            path: 'proyecto',
-                                            populate: { path: 'dependencia' }
-                                        })
-
-
-        
-
-        res.status(200).json({
-            status: true,
-            solicitud
-        })
-
-    }catch(error) {
-        console.log(error);
-        return res.status(500).json({
-            status: false,
-            message: 'Hable con el administrador'
-        })
-    }
-
-}
-
-
 const getByAlumno = async(req, res = response) => {
 
     const id = req.uid;
@@ -530,13 +579,13 @@ const getByAlumno = async(req, res = response) => {
             })
         }
 
-        if( !alumno.proyecto ) {
+        /* if( !alumno.proyecto ) {
             return res.json({
                 status: true,
                 message: `El Alumno no tiene un proyecto asignado.`
             })
         }
-
+ */
         res.json({
             satus: true,
             proyecto: alumno.proyecto
@@ -553,25 +602,89 @@ const getByAlumno = async(req, res = response) => {
 }
 
 
-
 const duplicar = async(req, res = response ) => {
 
     const id = req.params.id;
 
     try {
 
-        const proyectodb = await Proyecto.findById(id);
+        const [ proyectodb, periodoProximo ] = await Promise.all([
+            Proyecto.findById(id).populate('periodo').populate('dependencia'),
+            Periodo.findOne({isProximo: true})
+        ])
+    
 
-        const periodoActual = await Periodo.findOne({isActual: true});
+        if ( proyectodb.periodo.isProximo ) {
+            return res.status(400).json({
+                status: false,
+                message: 'No puedes duplicar un proyecto del periodo próximo.'
+            })
+        }
 
+        
         const proyectoNew = new Proyecto( proyectodb );
 
-        proyectoNew._id = Types.ObjectId();
-        proyectoNew.periodo = periodoActual;
-        proyectoNew.isNew = true;
-        proyectoNew.carreras = undefined;
+        proyectoNew._id           = Types.ObjectId();
+        proyectoNew.periodo       = periodoProximo;
+        proyectoNew.carreras      = undefined;
+        proyectoNew.fecha_inicial = Date.now();
+        proyectoNew.fecha_limite  = Date.now();
+        proyectoNew.isNew         = true;
 
         await proyectoNew.save();
+
+        res.status(201).json({
+            status: true,
+            proyecto: proyectoNew
+        })
+        
+    } catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
+
+}
+
+
+const adoptar = async(req, res = response) => {
+
+    const id = req.params.id;
+
+    try {
+
+        const [ proyecto, periodoProximo ] = await Promise.all([
+            Proyecto.findById(id).populate('periodo').populate('dependencia'),
+            Periodo.findOne({isProximo: true})
+        ])
+
+        if ( proyecto.adoptado ){
+            return res.status(400).json({
+                status: false,
+                message: 'Ya has adoptado este proyecto.'
+            })
+        }
+    
+        
+        const proyectoNew = new Proyecto( proyecto );
+
+        proyectoNew._id = Types.ObjectId();
+        proyectoNew.periodo = periodoProximo;
+        proyectoNew.publico = true;
+        proyectoNew.alumno = undefined;
+        proyectoNew.carreras = undefined;
+        proyectoNew.fecha_inicial = Date.now();
+        proyectoNew.fecha_limite = Date.now();
+        proyectoNew.isNew = true;
+
+        proyecto.adoptado = true;
+
+        await Promise.all([
+            proyectoNew.save(),
+            proyecto.save()
+        ])
 
         res.status(201).json({
             status: true,
@@ -597,12 +710,12 @@ module.exports = {
     createByAlumno,
     getAllByTipo,
     getById,
-    getPersonal,
-    getAllByCarreraAndPeriodoActualAndFechas,
+    getAllByCarreraAndPeriodoProximoAndFechas,
     getAllByCarrera,
     getByAlumno,
     update,
     updateByAlumno,
     deleteProyecto,
-    duplicar
+    duplicar,
+    adoptar
 }

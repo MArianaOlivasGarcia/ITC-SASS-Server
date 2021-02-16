@@ -85,14 +85,10 @@ const getByAlumno = async(req, res = response) => {
 
         const items = await Item.find({expediente}).sort('numero')
 
-        if ( !expediente ) {
-            return res.status(404).json({
-                status: false,
-                message: 'El Alumno no cuenta con un expediente.'
-            })
+        if ( expediente ) {
+            expediente.items = items;
         }
 
-        expediente.items = items;
         res.status(200).json({
             status: true,
             expediente
@@ -108,9 +104,64 @@ const getByAlumno = async(req, res = response) => {
 
 }
 
+
+
+
 const getById = async(req, res = response) => {
 
 
+    try{
+
+        const id = req.params.id;
+
+        const expediente = await Expediente.findById(id)
+                                .populate('alumno')
+                                .populate('programa')
+                                .populate({
+                                    path: 'programa',
+                                    populate: { path: 'proyecto' }
+                                })
+
+        const items = await Item.find({expediente}).sort('numero')
+
+        if ( expediente ) {
+            expediente.items = items;
+        }
+
+        res.status(200).json({
+            status: true,
+            expediente
+        })
+
+    } catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
+
+}
+
+
+
+// TODO: Hacer que la estructura sea dinamica
+// Obtener la estructura por algun codigo/clave/plan del expediente
+const getEstructura = async(req, res = response) => {
+
+    try{
+
+        res.status(200).json({
+            estructura: getEstructuraExpediente()
+        })
+
+    } catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
 
 }
 
@@ -122,5 +173,6 @@ const getById = async(req, res = response) => {
 module.exports = {
     create,
     getByAlumno,
-    getById
+    getById,
+    getEstructura
 }

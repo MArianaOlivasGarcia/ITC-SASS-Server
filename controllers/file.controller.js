@@ -3,11 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater')
-/* const {createReport} = require('docx-templates')
- */ 
 
 const Periodo = require('../models/periodo.model');
 const Alumno = require('../models/alumno.model');
+const Solicitud = require('../models/solicitud.model');
 const Item = require('../models/item-expediente.model');
 
 
@@ -16,9 +15,22 @@ const generateFile = async(req, res = response) => {
     const uid = req.uid;
     const idItem = req.params.idItem;
 
-    const [alumno, periodoActual, item] = await Promise.all([
-        Alumno.findById(uid).populate('carrera').populate('periodo'),
-        Periodo.findOne({isActual:true}),
+    const [solicitud, item] = await Promise.all([
+        Solicitud.findOne({alumno:uid, aceptado:true})
+                    .populate('alumno')
+                    .populate({
+                        path: 'alumno',
+                        populate: { path: 'carrera' }
+                    })
+                    .populate('proyecto')
+                    .populate({
+                        path: 'proyecto',
+                        populate: { path: 'dependencia' }
+                    })
+                    .populate({
+                        path: 'proyecto',
+                        populate: { path: 'periodo' }
+                    }),
         Item.findById(idItem)
     ]) 
 
@@ -33,20 +45,28 @@ const generateFile = async(req, res = response) => {
         return res.status(400).json({
             status: false,
             message: 'Tu documento ya fue aceptado.'
-        })
+        }) 
     }
+
+    const isDate = new Date(solicitud.inicio_servicio);
+    const tsDate = new Date(solicitud.termino_servicio);
   
     const data = {
-        alumno: alumno.toJSON(),
-        periodo: periodoActual.toJSON()
+        alumno: solicitud.alumno.toJSON(),
+        proyecto: solicitud.proyecto.toJSON(),
+        periodo: solicitud.proyecto.periodo.toJSON(),
+        inicio_servicio: isDate.toISOString().substring(0,10),
+        termino_servicio: tsDate.toISOString().substring(0,10),
     }
 
     const viejoPath = path.join( __dirname, `../uploads/expedientes/${item.archivo}` );
     // Borrar el "PDF" anterior
     borrarArchivo(viejoPath);
-    const nombreArchivo = `${alumno.numero_control}-${item.codigo}`
-    
-    await crearArchivo( item.codigo, data, nombreArchivo)
+
+    const extensionArchivo = 'docx';
+    const nombreArchivo = `${solicitud.alumno.numero_control}-${item.codigo}.${ extensionArchivo }`
+
+    await crearArchivo( item.codigo, data, nombreArchivo ,solicitud.alumno)
     // Cambiarle el nombre de archivo al itemdb
 
     let itemActualizado;
@@ -73,37 +93,6 @@ const generateFile = async(req, res = response) => {
         item: itemActualizado
     })
 }
-
-
-const crearArchivo = async( codigo, data, nameFile ) => {
-
-    // codigo, el archivo template (el que se va aditar)
-    // data, Información
-    // nameFile, nombre del archivo expediente resultante
-
-    const content = fs.readFileSync(path.resolve( __dirname, `../assets/archivos/${codigo}.docx`), 'binary');
-
-    const zip = new PizZip(content);
-    let doc;
-    try {
-        doc = new Docxtemplater(zip);
-    } catch (error) {
-        console.log(error)
-    }
-    doc.setData(data)
-
-    try {
-        doc.render()
-    } catch (error) {
-        console.log('segundo error')
-        console.log(error)
-    }
-
-    const buf = doc.getZip().generate({type: 'nodebuffer'})
-    fs.writeFileSync(path.resolve(__dirname, `../uploads/expedientes/${nameFile}.docx`), buf)
-
-}
-
 
 
 const uploadFile = async( req, res = response ) => {
@@ -191,6 +180,31 @@ const uploadFile = async( req, res = response ) => {
 }
 
 
+const obtenerFile = async( req, res = response ) => {
+
+    const archivo = req.params.archivo;
+
+    const pathFile = path.join( __dirname, `../uploads/expedientes/${ archivo }` );
+
+    
+    /* fs.readFileSync(pathFile, (err, data) => {
+        if (err){ res.status(500).send(err)};
+        res.contentType('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+           .send(`data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${new Buffer.from(data).toString('base64')}`);
+    }); */
+
+    if ( fs.existsSync (pathFile) ){
+        res.download( pathFile )
+    } else {
+        const pathFile = path.join( __dirname, `../assets/no-img.jpg` );
+        res.sendFile( pathFile );
+    }
+    
+}
+
+
+
+
 // TODO: Mover archivo  de expedientes/temp a expedientes
 // cambiar el item.archivoTemp = undefined y cambiar item.archivo 
 const aceptarFile = async( req, res = response) => {}
@@ -198,6 +212,43 @@ const aceptarFile = async( req, res = response) => {}
 const rechazarFile = async( req, res = response) => {}
 
 
+
+
+const crearArchivo = async( codigo, data, nombreArchivo, alumno ) => {
+
+    // codigo, el archivo template (el que se va aditar)
+    // data, Información
+
+    const content = fs.readFileSync(path.resolve( __dirname, `../assets/archivos/${codigo}.docx`), 'binary');
+
+    const zip = new PizZip(content);
+    let doc;
+    try {
+        doc = new Docxtemplater(zip);
+    } catch (error) {
+        console.log(error)
+    }
+    doc.setData(data)
+
+    try {
+        doc.render()
+    } catch (error) {
+        console.log(error)
+    }
+
+    const buf = doc.getZip().generate({type: 'nodebuffer'})
+
+    const numeroControl = alumno.numero_control;
+    const carpetaAlumno = path.resolve(__dirname, `../uploads/expedientes/${numeroControl}`);
+
+    if ( !fs.existsSync(carpetaAlumno) ) {
+        fs.mkdirSync(carpetaAlumno)
+    }
+
+
+    fs.writeFileSync(path.resolve(__dirname, `${carpetaAlumno}/${nombreArchivo}`), buf)
+
+}
 
 
 const borrarArchivo = (path) => {
@@ -214,5 +265,6 @@ const borrarArchivo = (path) => {
 
 module.exports = {
     generateFile,
-    uploadFile
+    uploadFile,
+    obtenerFile
 }

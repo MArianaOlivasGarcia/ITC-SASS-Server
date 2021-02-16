@@ -68,7 +68,7 @@ const getColeccion = async(req, res = response) => {
         case 'proyectos':
             data = await Proyecto.find( {$or: [{nombre: regex }]} )
                          .populate('dependencia', 'nombre')
-                         .populate('periodo', 'nombre')
+                         .populate('periodo', 'nombre isActual')
         break;
 
         case 'carreras':
@@ -77,6 +77,18 @@ const getColeccion = async(req, res = response) => {
 
         case 'solicitudes':
             
+            const solicitudes = await Solicitud.find({})
+                                    .populate('alumno')
+                                    .populate({
+                                        path: 'alumno',
+                                        populate: {path: 'carrera'}
+                                    })
+                                    .sort({fecha_solicitud: -1});
+            
+            data = solicitudes.filter( solicitud => {
+                return solicitud.alumno.nombre.includes(busqueda) || solicitud.alumno.numero_control.includes(busqueda);
+            })
+
         break;
 
 
