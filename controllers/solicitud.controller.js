@@ -130,7 +130,7 @@ const getByStatus = async(req, res = response) => {
 
             case 'rechazado':
                 solicitudesTemp = await Solicitud.find({rechazado: true}).sort({fecha_solicitud: -1}).skip(desde).limit(5)
-                                                                .populate('alumno')
+                                                               .populate('alumno')
                                                                 .populate('proyecto')
                                                                 .populate({
                                                                     path: 'alumno',
@@ -263,7 +263,7 @@ const getById = async(req, res = response) => {
 const create = async(req, res = response) => {
 
     const alumno = req.uid;
-    const proyecto = req.body;
+    const {proyecto, inicio_servicio, termino_servicio } = req.body;
 
     const hoy = Date.now();
 
@@ -282,9 +282,24 @@ const create = async(req, res = response) => {
             status: false,
             message: `La recepción de solicitudes de servicio social para el periodo ${proyectodb.periodo.nombre} ya vencio.`
         })
-    } /* else if ( hoy >= fi && hoy <= ft ) {
-        console.log('Esta recepcion de solicitudes de servicio social')
-    } */
+    }
+
+    const fip = new Date(proyectodb.periodo.fecha_inicio).getTime();
+    const ftp = new Date(proyectodb.periodo.fecha_termino).getTime();
+
+    const fis = new Date(inicio_servicio).getTime();
+
+    if ( fis < fip  ){
+        return res.status(400).json({
+            status: false,
+            message: `La fecha de inicio de servicio social tiene que ser posterior ó igual a la fecha de inicio del periodo ${proyectodb.periodo.nombre}.`
+        })
+    } else if ( fis > ftp ){
+        return res.status(400).json({
+            status: false,
+            message: `La fecha de termino de servicio social tiene que ser menor ó igual a la fecha de termino del periodo ${proyectodb.periodo.nombre}.`
+        })
+    }
 
     // Ya tiene una solicitud
     const existeSolicitud = await Solicitud.findOne({alumno});
@@ -320,6 +335,8 @@ const create = async(req, res = response) => {
 
         const data = {
             proyecto,
+            inicio_servicio,
+            termino_servicio,
             rechazado: false,
             aceptado: false,
             pendiente: true,
@@ -371,6 +388,8 @@ const create = async(req, res = response) => {
 
     const data = {
         proyecto,
+        inicio_servicio,
+        termino_servicio,
         alumno
     }
 
@@ -499,15 +518,14 @@ const aceptar = async(req, res = response) => {
                                                                 path: 'proyecto',
                                                                 populate: { path: 'periodo' }
                                                             })
-                                                            .populate('usuario_reviso')
+                                                            .populate('usuario_valido')
 
 
         // ====== CREAR EL EXPEDIENTE
-        // Crear el expediente
         const alumno = await Alumno.findById(solicitudActualizada.alumno);
        /* const expediente = new Expediente({alumno, solicitud: solicitudActualizada});
         await expediente.save();
-
+ 
         const estructura = getEstructuraExpediente(expediente._id, alumno);
  */
         // Crear los items de acuerdo a la estructura
@@ -517,9 +535,10 @@ const aceptar = async(req, res = response) => {
             const nuevoItem = new Item( item );
             await nuevoItem.save()
             
-        } */
+        } */ 
 
         /*alumno.solicitud = solicitudActualizada*/
+        alumno.periodo_servicio = solicitudActualizada.periodo;
         alumno.proyecto = solicitudActualizada.proyecto;
         /*alumno.expediente = expediente; */ 
         await alumno.save();
@@ -622,16 +641,21 @@ const rechazar = async(req, res = response) => {
         }
 
         const solicitudActualizada = await Solicitud.findByIdAndUpdate(idSolicitud, data, {new:true} )
-                                        .populate('alumno')
-                                        .populate({
-                                            path: 'alumno',
-                                            populate: { path: 'carrera' }
-                                        })
-                                        .populate('proyecto')
-                                        .populate({
-                                            path: 'proyecto',
-                                            populate: { path: 'dependencia' }
-                                        })
+                                                .populate('alumno')
+                                                .populate({
+                                                    path: 'alumno',
+                                                    populate: { path: 'carrera' }
+                                                })
+                                                .populate('proyecto')
+                                                .populate({
+                                                    path: 'proyecto',
+                                                    populate: { path: 'dependencia' }
+                                                })
+                                                .populate({
+                                                    path: 'proyecto',
+                                                    populate: { path: 'periodo' }
+                                                })
+                                                .populate('usuario_valido')
 
         
         res.json({

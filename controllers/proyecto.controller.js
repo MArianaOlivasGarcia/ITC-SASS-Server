@@ -43,7 +43,7 @@ const create = async(req, res = response) => {
 const createByAlumno = async(req, res = response ) => {
 
     const id = req.uid;
-    const {proyecto} = req.body;
+    const {proyecto, inicio_servicio, termino_servicio} = req.body;
     
     
     try {
@@ -96,6 +96,24 @@ const createByAlumno = async(req, res = response ) => {
                 message: `La recepción de solicitudes de servicio social para el periodo ${periodoProximo.nombre} ya vencio.`
             })
         }
+
+        const fip = new Date(periodoProximo.fecha_inicio).getTime();
+        const ftp = new Date(periodoProximo.fecha_termino).getTime();
+
+        const fis = new Date(inicio_servicio).getTime();
+
+        if ( fis < fip  ){
+            return res.status(400).json({
+                status: false,
+                message: `La fecha de inicio de servicio social tiene que ser posterior ó igual a la fecha de inicio del periodo ${periodoProximo.nombre}.`
+            })
+        } else if ( fis > ftp ){
+            return res.status(400).json({
+                status: false,
+                message: `La fecha de termino de servicio social tiene que ser menor ó igual a la fecha de termino del periodo ${periodoProximo.nombre}.`
+            })
+        }
+
         
         if ( !existeSolicitud ) {
 
@@ -104,14 +122,18 @@ const createByAlumno = async(req, res = response ) => {
                 periodo: periodoProximo,
                 alumno
             });
-            await proyectoNew.save() 
-
+            
             const solicitud = new Solicitud({
                 alumno,
                 proyecto: proyectoNew,
+                inicio_servicio,
+                termino_servicio,
             })
-
-            await solicitud.save();
+            
+            await Promise.all([
+                proyectoNew.save(),
+                solicitud.save()
+            ])
         
             return res.status(201).json({
                 status: true,
@@ -125,26 +147,20 @@ const createByAlumno = async(req, res = response ) => {
                 status: false,
                 message: 'Ya tienes una solicitud pendiente.'
             })
-        }
-
-        if ( existeSolicitud.aceptado ) {
+        } else if ( existeSolicitud.aceptado ) {
             return res.status(400).json({
                 status: false,
                 message: 'Ya tienes una solicitud aprobada.'
             })
-        }
-
-        if ( existeSolicitud.rechazado ) {
+        } else if ( existeSolicitud.rechazado ) {
 
             const proyectoNew = new Proyecto({
                 ...proyecto,
                 periodo: periodoProximo,
                 alumno,
             });
-            await proyectoNew.save() 
 
             const data = {
-                alumno,
                 proyecto: proyectoNew,
                 rechazado: false,
                 aceptado: false,
@@ -153,8 +169,12 @@ const createByAlumno = async(req, res = response ) => {
                 fecha_solicitud: Date.now(),
                 fecha_validacion: undefined
             }
+
+            await Promise.all([
+                proyectoNew.save(), 
+                Solicitud.findByIdAndUpdate( existeSolicitud._id, data, {new:true})
+            ]);
             
-            await Solicitud.findByIdAndUpdate( existeSolicitud._id, data, {new:true});
             
         
             res.status(201).json({
@@ -177,14 +197,15 @@ const createByAlumno = async(req, res = response ) => {
 }
 
 
-const getAllByTipo = async(req, res = response) => {
+const getAllByTipoAndPeriodo = async(req, res = response) => {
 
     try {
 
         const desde = Number(req.query.desde) || 0;
         const tipo = req.params.tipo;
+        const periodo = req.params.periodo;
 
-        let proyectos;
+        let proyectos = [];
         let total;
 
         switch ( tipo ) {
@@ -192,19 +213,12 @@ const getAllByTipo = async(req, res = response) => {
             // NO creados por alumno
             case 'publico':
                 [proyectos, total] = await Promise.all([
-                    Proyecto.find({publico:true}).populate('dependencia').populate('periodo').skip(desde).limit(5),
-                    Proyecto.countDocuments({publico:true})
+                    Proyecto.find({publico:true, periodo}).populate('dependencia').populate('periodo').skip(desde).limit(5),
+                    Proyecto.countDocuments({publico:true, periodo})
                 ]);
             break;
 
-            // Creados por alumnos
-           /*  case 'privado':
-                [proyectos, total] = await Promise.all([
-                    Proyecto.find({publico:false}).populate('dependencia').populate('periodo').skip(desde).limit(5),
-                    Proyecto.countDocuments({publico:false})
-                ]);
-            break; */
-             case 'privado':
+            case 'privado':
                 const solicitudes = await Solicitud.find({aceptado:true})
                                                 .skip(desde).limit(5)
                                                 .populate('proyecto')
@@ -217,14 +231,26 @@ const getAllByTipo = async(req, res = response) => {
                                                     populate: { path: 'periodo' }
                                                 })
                 
-                proyectos = solicitudes.map( solicitud => solicitud.proyecto );
-                total = proyectos.length;
+                /* const poyectosTemp = solicitudes.map( solicitud => {
+                    if ( !solicitud.proyecto.publico ){
+                        return solicitud.proyecto;
+                    }
+                });  */
+                solicitudes.forEach( solicitud => {
+                    if( !solicitud.proyecto.publico && solicitud.proyecto.periodo._id == periodo ){
+                        proyectos.push( solicitud.proyecto )
+                    }
+                })
+                   /* proyectos = poyectosTemp; */
+                
+                
+                   total = proyectos.length;
 
             break;
 
 
             default:
-                return res.status(400).json({
+                return res.status(400).json({ 
                     status: false,
                     message: 'El tipo válido tiene que ser publico o privado.'
                 })
@@ -295,7 +321,7 @@ const getById = async(req, res = response) => {
 }
 
 
-const getAllByCarreraAndPeriodoProximoAndFechas = async(req, res = response) => {
+const getAllByCarreraAndPeriodoProximo = async(req, res = response) => {
 
     const carrera = req.params.carrera
     const desde = Number(req.query.desde) || 0;
@@ -456,11 +482,11 @@ const updateByAlumno = async(req, res = response) => {
     const uid = req.params.id;
     const alumno = req.uid;
 
-    const { proyecto, ...obj } = req.body;
+    const { proyecto, inicio_servicio, termino_servicio } = req.body;
 
     try {
-
-        const proyectoDb = await Proyecto.findById(uid);
+        const proyectoDb = await Proyecto.findById(uid)
+                                    .populate('periodo');
 
         if (!proyectoDb) {
             return res.status(404).json({
@@ -485,32 +511,52 @@ const updateByAlumno = async(req, res = response) => {
             })
         }
 
-        // Si es rechazado puede editarlo
-        const proyectoActualizado = await Proyecto.findByIdAndUpdate(uid, proyecto, { new: true })
-                                            .populate('dependencia');
+        const fip = new Date(proyectoDb.periodo.fecha_inicio).getTime();
+        const ftp = new Date(proyectoDb.periodo.fecha_termino).getTime();
+ 
+        const fis = new Date(inicio_servicio).getTime();
 
+        if ( fis < fip  ){
+            return res.status(400).json({
+                status: false,
+                message: `La fecha de inicio de servicio social tiene que ser posterior ó igual a la fecha de inicio del periodo ${proyectoDb.periodo.nombre}.`
+            })
+        } else if ( fis > ftp ){
+            return res.status(400).json({
+                status: false,
+                message: `La fecha de termino de servicio social tiene que ser menor ó igual a la fecha de termino del periodo ${proyectoDb.periodo.nombre}.`
+            })
+        }
+
+        // Si es rechazado puede editarlo
         // Si edito el proyecto lo vuelvo a mandar a la solicitud
         const data = {
-            proyecto: proyectoActualizado,
+            proyecto,
             rechazado: false,
             aceptado: false,
             pendiente: true,
             error: undefined,
             fecha_solicitud: Date.now(),
-            ...obj
+            inicio_servicio,
+            termino_servicio,
         }
 
-        await Solicitud.findOneAndUpdate( {alumno, proyecto: proyectoDb}, data, {new:true})
-                                                    .populate('alumno')
-                                                    .populate({
-                                                        path: 'alumno',
-                                                        populate: { path: 'carrera'}
-                                                    })
-                                                    .populate('proyecto')
-                                                    .populate({
-                                                        path: 'proyecto',
-                                                        populate: { path: 'dependencia'}
-                                                    })
+        const [ proyectoActualizado ] = await Promise.all([
+            Proyecto.findByIdAndUpdate(uid, proyecto, { new: true })    
+                .populate('dependencia'),
+            Solicitud.findOneAndUpdate( {alumno, proyecto: proyectoDb}, data, {new:true})
+                .populate('alumno')
+                .populate({
+                    path: 'alumno',
+                    populate: { path: 'carrera'}
+                })
+                .populate('proyecto')
+                .populate({
+                    path: 'proyecto',
+                    populate: { path: 'dependencia'}
+                })
+        ])    
+
 
         res.status(200).json({
             status: true,
@@ -708,9 +754,9 @@ const adoptar = async(req, res = response) => {
 module.exports = {
     create,
     createByAlumno,
-    getAllByTipo,
+    getAllByTipoAndPeriodo,
     getById,
-    getAllByCarreraAndPeriodoProximoAndFechas,
+    getAllByCarreraAndPeriodoProximo,
     getAllByCarrera,
     getByAlumno,
     update,

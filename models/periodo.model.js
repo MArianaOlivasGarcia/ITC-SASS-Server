@@ -14,6 +14,7 @@ const PeriodoSchema = Schema({
         fecha_inicio: { type: Date },
         fecha_termino: { type: Date }
     },
+    apertura_expedientes: { type: Boolean, default: false },
     codigo: { type: Number }
 
 }, { collection: 'periodos'});

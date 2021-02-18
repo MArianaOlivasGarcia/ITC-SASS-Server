@@ -4,7 +4,7 @@ const fs = require('fs');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater')
 
-const Periodo = require('../models/periodo.model');
+
 const Alumno = require('../models/alumno.model');
 const Solicitud = require('../models/solicitud.model');
 const Item = require('../models/item-expediente.model');
@@ -48,6 +48,25 @@ const generateFile = async(req, res = response) => {
         }) 
     }
 
+    // VALIDAR QUE ESTE ENTRE LAS FECHAS DE INICIO Y MAXIMO (DE ENTREGA)
+    const hoy = Date.now();
+    const { fecha_inicial, fecha_limite } = item;
+    const fi = new Date(fecha_inicial).getTime();
+    const fl = new Date(fecha_limite).getTime();
+    
+    if ( hoy < fi  ){
+        return res.status(400).json({
+            status: false,
+            message: `Aun no es fecha para el envio del archivo ${item.titulo}.`
+        })
+    } else if ( hoy > fl ){
+        return res.status(400).json({
+            status: false,
+            message: `La fecha para el envio del archivo ${item.titulo} ya vencio.`
+        })
+    }
+
+    // GENERAR EL ARCHIVO
     const isDate = new Date(solicitud.inicio_servicio);
     const tsDate = new Date(solicitud.termino_servicio);
   
@@ -59,10 +78,10 @@ const generateFile = async(req, res = response) => {
         termino_servicio: tsDate.toISOString().substring(0,10),
     }
 
-    const viejoPath = path.join( __dirname, `../uploads/expedientes/${item.archivo}` );
+    const viejoPath = path.join( __dirname, `../uploads/expedientes/${solicitud.alumno.numero_control}/${item.archivo}` );
     // Borrar el "PDF" anterior
     borrarArchivo(viejoPath);
-
+    
     const extensionArchivo = 'docx';
     const nombreArchivo = `${solicitud.alumno.numero_control}-${item.codigo}.${ extensionArchivo }`
 
@@ -77,6 +96,7 @@ const generateFile = async(req, res = response) => {
                                                                   rechazado: false,
                                                                   aceptado: false,
                                                                   iniciado: true,
+                                                                  fecha_entrega: Date.now(),
                                                                   proceso: true}, {new:true});
     } else {
         // Si no requiere reenvio ponerle archivo
@@ -84,7 +104,8 @@ const generateFile = async(req, res = response) => {
                                                                   pendiente: true,
                                                                   rechazado: false,
                                                                   aceptado: false,
-                                                                  iniciado:true}, {new:true});
+                                                                  fecha_entrega: Date.now(),
+                                                                  iniciado:true }, {new:true});
     }
 
 

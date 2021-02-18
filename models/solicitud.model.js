@@ -1,5 +1,7 @@
 const { Schema, model, Types } = require('mongoose');
 const Proyecto = require('./proyecto.model');
+const Periodo = require('./periodo.model');
+
 
 const SolicitudSchema = Schema({
 
@@ -26,7 +28,8 @@ const SolicitudSchema = Schema({
         observacion: { type: String },
     },
 
-    archivo: { type: String }
+    archivo: { type: String },
+    periodo: { type: Types.ObjectId, ref: 'Periodo'}, 
     
 
 }, {collection: 'solicitudes'});
@@ -53,12 +56,15 @@ SolicitudSchema.method('toJSON', function() {
 SolicitudSchema.pre('save', async function(next) {
 
     // ASIGNAR FECHAS DE INCIIO Y TERMINO DE SERVICIO IGUAL A TODOS 
-    const proyecto = await Proyecto.findById(this.proyecto).populate('periodo');
+/*     const proyecto = await Proyecto.findById(this.proyecto).populate('periodo');
     const fechaInicio = proyecto.periodo.fecha_inicio;
     this.inicio_servicio = new Date(fechaInicio);
-    this.termino_servicio =  new Date(fechaInicio.setMonth(fechaInicio.getMonth() + 6 ));
+    this.termino_servicio =  new Date(fechaInicio.setMonth(fechaInicio.getMonth() + 6 )); */
     // FIN ASIGNAR FECHAS DE INCIIO Y TERMINO DE SERVICIO IGUAL A TODOS 
   
+    const periodoProximo = await Periodo.findOne({isProximo:true});
+    this.periodo = periodoProximo;
+
 
     next();
     

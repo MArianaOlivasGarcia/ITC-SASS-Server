@@ -2,12 +2,14 @@
 
 
 const { Router } = require('express');
-const { create, getByAlumno, getById, getEstructura } = require('../controllers/expediente.controller');
-const { validarJWT } = require('../middleware/validar-jwt.middleware');
+const { create, crearExpedientes, getByAlumno, getById, getEstructura } = require('../controllers/expediente.controller');
+const { validarJWT, validarADMIN_ROLE } = require('../middleware/validar-jwt.middleware');
 
 const router = Router();
 
 router.get('/create', [ validarJWT ] , create)
+
+router.get('/create/all/:periodo', [ validarJWT, validarADMIN_ROLE ] , crearExpedientes)
 
 router.get('/alumno', validarJWT, getByAlumno)
 

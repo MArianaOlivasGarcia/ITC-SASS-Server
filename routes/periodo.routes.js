@@ -1,8 +1,10 @@
 const { Router } = require('express');
-const { getAll, getById, create, upadate, getAllPaginados } = require('../controllers/periodo.controller');
+const { getAll, getById, create, upadate, getAllPaginados, getProximo } = require('../controllers/periodo.controller');
 const router = Router();
 
 
+
+router.get('/proximo', getProximo)
 
 router.get('/all', getAll)
 

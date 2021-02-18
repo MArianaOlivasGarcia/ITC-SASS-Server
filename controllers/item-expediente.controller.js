@@ -1,4 +1,6 @@
-const { response } = require("express");
+const { response } = require('express');
+const fs = require('fs');
+const path = require('path');
 const Item = require('../models/item-expediente.model');
 const Alumno = require('../models/alumno.model');
 const Usuario = require('../models/usuario.model')
@@ -39,8 +41,6 @@ const getById = async(req, res = response) => {
     }
 
 }
-
-
 
 const getByStatusAndCodigo = async(req, res = response) => {
 
@@ -215,14 +215,14 @@ const aceptar = async(req, res = response) => {
         }
 
 
-    
         const data = {
-            valido: idUser,
+            usuario_valido: idUser,
             pendiente: false,
             aceptado: true,
             rechazado: false,
             error: undefined,
-            terminado: true
+            terminado: true,
+            fecha_validacion: Date.now()
         }
 
         const itemActualizado = await Item.findByIdAndUpdate(idItem, data, {new:true} )
@@ -256,7 +256,6 @@ const aceptar = async(req, res = response) => {
 
 }
 
-
 const rechazar = async(req, res = response) => {
 
     const idItem = req.params.id;
@@ -264,7 +263,8 @@ const rechazar = async(req, res = response) => {
 
     try {
 
-        const item = await Item.findById(idItem);
+        const item = await Item.findById(idItem)
+                                .populate('alumno');
 
         if ( !item ) {
             return res.status(404).json({
@@ -283,15 +283,24 @@ const rechazar = async(req, res = response) => {
 
 
         const data = {
-            valido: idUser,
+            usuario_valido: idUser,
             error: req.body,
             pendiente: false,
             aceptado: false,
             rechazado: true,
+            fecha_validacion: Date.now()
         }
 
-        // TODO: BORRAR EL ARCHIVO YA QUE NO HA SIDO ACEPTADO,
-        // DE MOMENTO LO REEMPLAZA
+
+        
+        // BORRAR EL ARCHIVO YA QUE HA SIDO RECHAZADO
+        const viejoPath = path.join( __dirname, `../uploads/expedientes/${item.alumno.numero_control}/${item.archivo}` );
+                                            
+        if ( fs.existsSync( viejoPath ) ) {
+            fs.unlinkSync( viejoPath );
+        }
+
+        
 
         const itemActualizado = await Item.findByIdAndUpdate(idItem, data, {new:true} )
                                         .populate('alumno')
@@ -306,7 +315,7 @@ const rechazar = async(req, res = response) => {
             item: itemActualizado
         })
 
-    } catch(error){
+    } catch(error){ 
         console.log(error);
         return res.status(500).json({
             status: false,
@@ -318,13 +327,82 @@ const rechazar = async(req, res = response) => {
 
 }
 
+const actualizarFechas = async (req, res = response ) => {
+
+    const uid = req.params.id;
+    const { fecha_inicial, fecha_limite } = req.body;
+    
+    try{
+
+        const item = await Item.findById(uid);
+
+        if (!item) {
+            return res.status(404).json({
+                status: false,
+                message: `No existe un item con el id ${uid}`
+            })
+        }
+
+        const itemActualizado = await Item.findByIdAndUpdate(uid, {fecha_inicial, fecha_limite}, {new:true});
+
+        return res.status(200).json({
+            status: true,
+            item: itemActualizado
+        })
+
+    } catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
+
+}
+
+const actualizarFechasByCodigoAndPeriodo = async (req, res = response ) => {
+
+    const codigo = req.params.codigo;
+    const periodo = req.params.periodo;
+    const { fecha_inicial, fecha_limite } = req.body;
+    
+    try{
+
+        const items = await Item.find({codigo, periodo});
+
+        if (items.length == 0) {
+            return res.status(404).json({
+                status: false,
+                message: `No hay items que puedan ser actualizados.`
+            })
+        }
+
+        items.forEach( async item => {
+            await Item.findByIdAndUpdate(item, {fecha_inicial, fecha_limite}, {new:true});
+        });
 
 
+        return res.status(200).json({
+            status: true,
+            message: 'Fechas de los items actualizadas con éxito.'
+        })
+
+    } catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
+
+}
 
 
 module.exports = {
     getById,
     getByStatusAndCodigo,
     aceptar,
-    rechazar
+    rechazar,
+    actualizarFechas,
+    actualizarFechasByCodigoAndPeriodo
 }

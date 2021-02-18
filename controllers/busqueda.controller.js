@@ -1,10 +1,11 @@
-const { response } = require("express");
-const Usuario = require('../models/usuario.model')
-const Alumno = require('../models/alumno.model')
-const Dependencia = require('../models/dependencia.model')
-const Proyecto = require('../models/proyecto.model')
-const Carrera = require('../models/carrera.model')
-const Solicitud = require('../models/solicitud.model')
+const { response } = require("express");;
+const Usuario = require('../models/usuario.model');
+const Alumno = require('../models/alumno.model');
+const Dependencia = require('../models/dependencia.model');
+const Proyecto = require('../models/proyecto.model');
+const Carrera = require('../models/carrera.model');
+const Solicitud = require('../models/solicitud.model');
+const Item = require('../models/item-expediente.model');
 
 const getTodo = async(req, res = response) => {
 
@@ -91,11 +92,66 @@ const getColeccion = async(req, res = response) => {
 
         break;
 
+        case 'documentos':
+            
+            const codigo = req.query.codigo;
+            const status = req.query.status;
+
+            console.log(status)
+            let documentos = [];
+            switch( status ) {
+                case 'pendiente':
+                    documentos = await Item.find({codigo, pendiente:true})
+                            .populate('alumno')
+                            .populate({
+                                path: 'alumno',
+                                populate: {path: 'carrera'}
+                            })
+                            .sort({fecha_entrega: -1});
+                    data = documentos.filter( item => {
+                        return item.alumno.nombre.includes(busqueda) || item.alumno.numero_control.includes(busqueda);
+                    })
+                break;
+                case 'aceptado':
+                    documentos = await Item.find({codigo, aceptado:true})
+                            .populate('alumno')
+                            .populate({
+                                path: 'alumno',
+                                populate: {path: 'carrera'}
+                            })
+                            .sort({fecha_entrega: -1});
+                    data = documentos.filter( item => {
+                        return item.alumno.nombre.includes(busqueda) || item.alumno.numero_control.includes(busqueda);
+                    })
+                break;
+                case 'rechazado':
+                    documentos = await Item.find({codigo, rechazado:true})
+                            .populate('alumno')
+                            .populate({
+                                path: 'alumno',
+                                populate: {path: 'carrera'}
+                            })
+                            .sort({fecha_entrega: -1});
+                    data = documentos.filter( item => {
+                        return item.alumno.nombre.includes(busqueda) || item.alumno.numero_control.includes(busqueda);
+                    })
+                break;
+
+                default:
+                    return res.status(400).json({
+                        status: false,
+                        message: 'Los status permitidos son pendiente, aceptado ó rechazado.'
+                    })
+            }
+            
+
+        break;
+
 
         default:
             return res.status(400).json({
                 status: false,
-                message: 'Las colecciones permitidas son usuarios, alumnos, dependencias, proyectos o solicitudes.'
+                message: 'Las colecciones permitidas son usuarios, alumnos, dependencias, proyectos, solicitudes ó documentos.'
             })
 
     }

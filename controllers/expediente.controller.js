@@ -4,6 +4,7 @@ const Expediente = require("../models/expediente.model");
 const Item = require('../models/item-expediente.model');
 const Alumno = require('../models/alumno.model');
 const Solicitud = require('../models/solicitud.model');
+const Periodo = require("../models/periodo.model");
 
 const create = async(req, res = response) => {
 
@@ -70,6 +71,76 @@ const create = async(req, res = response) => {
 }
 
 
+const crearExpedientes = async(req, res = response) => {
+
+    const periodo = req.params.periodo;
+
+    try{
+        const periododb = await Periodo.findById(periodo);
+
+        if ( periododb.apertura_expedientes ){
+            return res.status(400).json({
+                status: false,
+                message: `Ya se realizo la apertura de Expedientes para el periodo ${periododb.nombre}`
+            })
+        }
+
+        const existPendientes = await Solicitud.find({pendiente:true, periodo:periododb});
+
+        if ( existPendientes.length > 0 ){
+            return res.status(400).json({
+                status: false,
+                message: 'Aun hay Solicitudes de Servicio Social pendientes por revisar.'
+            })
+        }
+
+        
+        const existAceptadas = await Solicitud.find({aceptado:true, periodo:periododb})
+
+        if ( existAceptadas.length == 0 ){
+            return res.status(400).json({
+                status: false,
+                message: 'No hay Solicitudes de Servicio Social aceptadas.'
+            })
+        }
+
+
+        existAceptadas.forEach( async solicitud => {
+
+            const expediente = new Expediente({alumno:solicitud.alumno, solicitud })
+            await expediente.save()
+
+            const estructura = getEstructuraExpediente(expediente._id, solicitud.alumno);
+
+            for (let i = 0; i < estructura.length; i++) {
+                const item = new Item( estructura[i] );
+                await item.save();
+            }
+
+        });
+
+        periododb.apertura_expedientes = true;
+        await periododb.save();
+
+        res.status(201).json({
+            status: true,
+            message: 'Apertura de Expedientes realizada con éxito.',
+            periodo: periododb
+        })
+ 
+
+    } catch(error) {
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
+
+
+}
+
+
 const getByAlumno = async(req, res = response) => {
 
     try{
@@ -103,8 +174,6 @@ const getByAlumno = async(req, res = response) => {
     }
 
 }
-
-
 
 
 const getById = async(req, res = response) => {
@@ -144,7 +213,6 @@ const getById = async(req, res = response) => {
 }
 
 
-
 // TODO: Hacer que la estructura sea dinamica
 // Obtener la estructura por algun codigo/clave/plan del expediente
 const getEstructura = async(req, res = response) => {
@@ -172,6 +240,7 @@ const getEstructura = async(req, res = response) => {
 
 module.exports = {
     create,
+    crearExpedientes,
     getByAlumno,
     getById,
     getEstructura

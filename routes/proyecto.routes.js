@@ -2,10 +2,10 @@
 const { Router } = require('express');
 const { create,
         createByAlumno,
-        getAllByTipo,
+        getAllByTipoAndPeriodo,
         getById,
         getByAlumno,
-        getAllByCarreraAndPeriodoProximoAndFechas,
+        getAllByCarreraAndPeriodoProximo,
         update,
         updateByAlumno,
         deleteProyecto,
@@ -18,9 +18,9 @@ router.post('/create', [ validarJWT, validarADMIN_ROLE ], create)
 
 router.post('/create/alumno', validarJWT ,createByAlumno)
 
-router.get('/all/:tipo', getAllByTipo)
+router.get('/all/carrera/:carrera', getAllByCarreraAndPeriodoProximo)
 
-router.get('/all/carrera/:carrera', getAllByCarreraAndPeriodoProximoAndFechas)
+router.get('/all/:tipo/:periodo', getAllByTipoAndPeriodo)
 
 router.get('/alumno', validarJWT, getByAlumno)
 

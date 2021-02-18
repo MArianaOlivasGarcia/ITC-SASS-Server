@@ -1,4 +1,6 @@
 const { Schema, model, Types } = require('mongoose');
+const Expediente = require('./expediente.model');
+const Periodo = require('./periodo.model');
 
 const ItemExpedienteSchema = Schema({
     
@@ -8,16 +10,18 @@ const ItemExpedienteSchema = Schema({
     numero: { type: Number },
 
     expediente: { type: Types.ObjectId, ref:'Expediente', required: true},
+    periodo: { type: Types.ObjectId, ref:'Periodo'},
     titulo: { type: String },
     codigo: { type: String },
     archivoTemp: { type: String },
     archivo: { type: String },
     
-    
-
+    fecha_inicial: { type: Date, default: Date.now() },
     fecha_limite: { type: Date, default: Date.now() },
     fecha_entrega: { type: Date },
-    fecha_aprobacion: { type: Date },
+    fecha_validacion: { type: Date },
+
+    usuario_valido: { type: Types.ObjectId, ref: 'Usuario'}, 
 
     error: { 
         observacion: { type: String },
@@ -50,20 +54,48 @@ const ItemExpedienteSchema = Schema({
     // El item ya finalizo, esta terminado
     finalizado: { type: Boolean, default: false },
 
-    valido: { type: Types.ObjectId, ref:'Usuario' },
-
 
 }, { collection: 'items'});
 
 
 
 ItemExpedienteSchema.method('toJSON', function() {
-    const { __v, updated_at, fecha_limite, ...object } = this.toObject();
+    const { __v, updated_at, fecha_inicial, fecha_limite, fecha_entrega, fecha_validacion, ...object } = this.toObject();
 
-    const bDate = new Date(fecha_limite);
-    object.fecha_limite =  bDate.toISOString().substring(0,10);
+    const fiDate = new Date(fecha_inicial);
+    const flDate = new Date(fecha_limite);
+ 
+   if( fecha_entrega ){
+       const feDate = new Date(fecha_entrega);
+       object.fecha_entrega    = feDate.toISOString().substring(0,10);
+    }
+
+    if ( fecha_validacion ) {
+        const fvDate = new Date(fecha_validacion);
+        object.fecha_validacion = fvDate.toISOString().substring(0,10);
+    }
+
+    object.fecha_inicial    = fiDate.toISOString().substring(0,10);
+    object.fecha_limite     = flDate.toISOString().substring(0,10);
+    
 
     return object;
-}) 
+})  
+
+
+ItemExpedienteSchema.pre('save', async function(next) {
+
+    
+    /* const periodoProximo = await Periodo.findOne({isProximo:true});
+    this.periodo = periodoProximo;
+ */
+
+    const expediente = await Expediente.findById(this.expediente);
+    this.periodo = expediente.periodo;
+
+    next();
+    
+})
+
 
 module.exports = model('Item', ItemExpedienteSchema)
