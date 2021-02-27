@@ -61,8 +61,7 @@ const getAllPaginados = async(req, res = response) => {
 
 const create = async(req, res = response) => {
 
-    // 2020/01/03
-    // YYYY/MM/DD
+    
     const { isActual, isProximo } = req.body;
 
     if ( isActual && isProximo ) {

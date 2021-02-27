@@ -1,4 +1,6 @@
 const { Schema, model } = require('mongoose');
+const moment = require('moment-timezone');
+moment.tz('America/Cancun');
 
 const AvisoSchema = Schema({
 
@@ -7,17 +9,13 @@ const AvisoSchema = Schema({
     foto: { type: String },
     enlace: { type: String },
     disponible: { type: Boolean, default: true },
-    fecha_publicacion: { type: Date, default: Date.now() }
+    fecha_publicacion: { type: String, default: moment().format("YYYY-MM-DD") }
 
 }, { collection: 'avisos'});
 
 
 AvisoSchema.method('toJSON', function() {
-    const { __v, fecha_publicacion, ...object } = this.toObject();
-
-    const cDate = new Date(fecha_publicacion);
-    object.fecha_publicacion =  cDate.toISOString().substring(0,10);
-
+    const { __v, ...object } = this.toObject();
     return object;
 })
 

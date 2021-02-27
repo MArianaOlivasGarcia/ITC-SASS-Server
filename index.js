@@ -1,9 +1,14 @@
 const express = require('express');
-const path = require('path');
 require('dotenv').config();
 const morgan = require('morgan')
 const cors = require('cors')
 const serverIndex = require('serve-index')
+const moment = require('moment-timezone');
+// TimeZone de nuestro servidor
+/* moment().tz('America/Mexico_City').format();
+ */
+moment.locale('es-mx');
+moment.tz('America/Cancun');
 
 //DB Config
 require('./database/config').dbConnection();
@@ -59,5 +64,5 @@ server.listen(process.env.PORT, (err) => {
     if (err) throw new Error(err);
 
     console.log('Servidor corriendo en puerto', process.env.PORT);
-
+    
 });

@@ -78,6 +78,7 @@ const getMenuAlumnoFrontEnd = () => {
       titulo: 'DASHBOARD',
       submenu: [
         { titulo: 'Mi perfil', icono: 'fas fa-user-graduate mr-2', url: 'perfil' },
+        { titulo: 'Banco de Convenios vigentes', icono: 'fas fa-building mr-2', url: 'dependencias' },
         { titulo: 'Banco de Proyectos', icono: 'fas fa-briefcase mr-2', url: 'proyectos' },
         { titulo: 'Proyecto Personal', icono: 'fas fa-pencil-ruler mr-2', url: 'proyecto-personal' },
         { titulo: 'Mi expediente', icono: 'fas fa-book mr-2', url: 'expediente' },

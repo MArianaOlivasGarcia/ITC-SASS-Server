@@ -110,13 +110,13 @@ const crearExpedientes = async(req, res = response) => {
             const expediente = new Expediente({alumno:solicitud.alumno, solicitud })
             await expediente.save()
 
-            const estructura = getEstructuraExpediente(expediente._id, solicitud.alumno);
+             const estructura = getEstructuraExpediente(expediente._id, solicitud.alumno);
 
             for (let i = 0; i < estructura.length; i++) {
                 const item = new Item( estructura[i] );
                 await item.save();
             }
-
+ 
         });
 
         periododb.apertura_expedientes = true;

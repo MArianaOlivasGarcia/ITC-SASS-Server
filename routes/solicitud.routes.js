@@ -7,10 +7,13 @@ const { create,
         aceptar,
         rechazar,
         getAceptadaByAlumno,
+        getCantidadAceptadasAndRechazadas,
         getSolicitudAndProyectoPersonal} = require('../controllers/solicitud.controller');
 const router = Router();
 
 router.get('/all/:status',validarJWT ,getByStatus)
+
+router.get('/totales/:periodo',  getCantidadAceptadasAndRechazadas)
 
 router.get('/alumno', validarJWT,  getByAlumno)
 

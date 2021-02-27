@@ -1,29 +1,52 @@
 const { Router, response } = require('express');
 const router = Router();
 
-const libre = require('libreoffice-convert');
+const libre = require('libreoffice-convert-win');
 
 const path = require('path');
 const fs = require('fs');
 
 
-router.post('/test/:id', async(req, res = response) => {
+router.get('/test', (req, res ) => {
+
+  const inicio_servicio = new Date("2021-02-02");
+  const nueva = new Date( inicio_servicio.setDate(inicio_servicio.getDate() + 3) )
+  console.log(nueva)
+
+  res.json({
+    hola: 'Hola' 
+  })
+
+})
+
+
+
+router.post('/test', async(req, res = response) => {
 
     const extend = '.pdf'
-    const enterPath = path.join(__dirname, '/ITC-VI-PO-002-02.docx');
-    const outputPath = path.join(__dirname, `/example${extend}`);
+    const enterPath = path.join(__dirname, '../uploads/expedientes/17530051/17530051-ITC-VI-PO-002-06.docx');
+    const outputPath = path.join(__dirname, `../uploads/expedientes/17530051/17530051-ITC-VI-PO-002-06.pdf` );
     
-    // Read file
+
     const file = fs.readFileSync(enterPath);
     // Convert it to pdf format with undefined filter (see Libreoffice doc about filter)
     libre.convert(file, extend, undefined, (err, done) => {
-        if (err) {
-          console.log(`Error converting file: ${err}`);
-        }
-        
-        // Here in done you have pdf file which you can save or transfer in another stream
-        fs.writeFileSync(outputPath, done);
-    });
+      
+      if (err) {
+        console.log(`Error converting file: ${err}`);
+      }
+    
+      // Here in done you have pdf file which you can save or transfer in another stream
+      fs.writeFileSync(outputPath, done);
+     
+     });
+    
+
+    res.json({
+      status: true
+    })
+
+
 
 })
 

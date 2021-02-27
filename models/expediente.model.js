@@ -1,14 +1,15 @@
 const { Schema, model, Types } = require('mongoose');
 const Alumno = require('./alumno.model');
 const Solicitud = require('./solicitud.model');
+const moment = require('moment-timezone')
 
 const ExpedienteSchema = Schema({
 
     solicitud: { type: Types.ObjectId, ref: 'Solicitud', required: true },
     alumno: { type: Types.ObjectId, ref: 'Alumno', required: true },
     items: [{ type: Types.ObjectId, ref: 'Item'}],   
-    fecha_inicio: { type: Date, default: Date.now },
-    fecha_termino: { type: Date },
+    apertura: { type: String, default: moment().format("YYYY-MM-DD") },
+    cierre: { type: Date },
     periodo: { type: Types.ObjectId, ref: 'Periodo' },
 
 }, { collection: 'expedientes'});
@@ -32,5 +33,6 @@ ExpedienteSchema.pre('save', async function(next) {
     next();
     
 })
+
 
 module.exports = model('Expediente', ExpedienteSchema)

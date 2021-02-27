@@ -7,7 +7,7 @@ const CarreraSchema = Schema({
 }, { collection: 'carreras'} );
 
 CarreraSchema.method('toJSON', function() {
-    const { __v, created_at, updated_at, ...object } = this.toObject();
+    const { __v, ...object } = this.toObject();
     return object;
 })
 

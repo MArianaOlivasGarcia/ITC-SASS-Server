@@ -3,14 +3,18 @@ const path = require('path');
 const fs = require('fs');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater')
+const moment = require('moment-timezone')
+
+const expressions = require('angular-expressions');
+const assign = require("lodash/assign");
 
 
 const Alumno = require('../models/alumno.model');
 const Solicitud = require('../models/solicitud.model');
 const Item = require('../models/item-expediente.model');
 
-
-const generateFile = async(req, res = response) => {
+// USO DEL ALUMNO PARA GENERAR SUS ARCHIVOS DE LOS ITEMS DEL EXPEDIENTE
+const generateFileItems = async(req, res = response) => {
 
     const uid = req.uid;
     const idItem = req.params.idItem;
@@ -49,7 +53,8 @@ const generateFile = async(req, res = response) => {
     }
 
     // VALIDAR QUE ESTE ENTRE LAS FECHAS DE INICIO Y MAXIMO (DE ENTREGA)
-    const hoy = Date.now();
+    const today = moment().format("YYYY-MM-DD");
+    const hoy = new Date(today);
     const { fecha_inicial, fecha_limite } = item;
     const fi = new Date(fecha_inicial).getTime();
     const fl = new Date(fecha_limite).getTime();
@@ -67,16 +72,21 @@ const generateFile = async(req, res = response) => {
     }
 
     // GENERAR EL ARCHIVO
-    const isDate = new Date(solicitud.inicio_servicio);
-    const tsDate = new Date(solicitud.termino_servicio);
-  
+   /*  const isDate = new Date(solicitud.inicio_servicio);
+    const tsDate = new Date(solicitud.termino_servicio); */
+    const fechaCompleta = moment().format("DD MMMM YYYY")
     const data = {
         alumno: solicitud.alumno.toJSON(),
         proyecto: solicitud.proyecto.toJSON(),
         periodo: solicitud.proyecto.periodo.toJSON(),
-        inicio_servicio: isDate.toISOString().substring(0,10),
-        termino_servicio: tsDate.toISOString().substring(0,10),
+        inicio_servicio : solicitud.inicio_servicio,
+        termino_servicio: solicitud.termino_servicio,
+        hoy: moment().format("DD/MM/YYYY"),
+        dia: fechaCompleta.split(' ')[0],
+        mes: fechaCompleta.split(' ')[1],
+        anio: fechaCompleta.split(' ')[2]
     }
+    console.log(data)
 
     const viejoPath = path.join( __dirname, `../uploads/expedientes/${solicitud.alumno.numero_control}/${item.archivo}` );
     // Borrar el "PDF" anterior
@@ -114,6 +124,7 @@ const generateFile = async(req, res = response) => {
         item: itemActualizado
     })
 }
+
 
 
 const uploadFile = async( req, res = response ) => {
@@ -200,19 +211,14 @@ const uploadFile = async( req, res = response ) => {
 
 }
 
-
+// OBTENER EL ARCHIVO
 const obtenerFile = async( req, res = response ) => {
 
-    const archivo = req.params.archivo;
-
-    const pathFile = path.join( __dirname, `../uploads/expedientes/${ archivo }` );
-
     
-    /* fs.readFileSync(pathFile, (err, data) => {
-        if (err){ res.status(500).send(err)};
-        res.contentType('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-           .send(`data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${new Buffer.from(data).toString('base64')}`);
-    }); */
+    const archivo = req.params.archivo;
+    const numero_control = archivo.slice(0, 8);
+    const pathFile = path.join( __dirname, `../uploads/expedientes/${ numero_control }/${ archivo }` );
+
 
     if ( fs.existsSync (pathFile) ){
         res.download( pathFile )
@@ -226,6 +232,20 @@ const obtenerFile = async( req, res = response ) => {
 
 
 
+const generateFile = async( req, res = response ) => {
+
+    const codigo = req.params.codigo;
+    const alumno = req.params.alumno;
+
+    const alumnodb = await Alumno.findById(alumno)
+                              .populate('carrera')
+
+                              
+    await crearArchivo(codigo, data, nombreArchivo, alumnodb)
+
+}
+
+
 // TODO: Mover archivo  de expedientes/temp a expedientes
 // cambiar el item.archivoTemp = undefined y cambiar item.archivo 
 const aceptarFile = async( req, res = response) => {}
@@ -234,6 +254,37 @@ const rechazarFile = async( req, res = response) => {}
 
 
 
+
+// ******************
+// FUNCIONES DE AYUDA 
+// ******************
+
+expressions.filters.lower = function(input) {
+    if(!input) return input;
+    return input.toLowerCase();
+}
+
+function angularParser(tag) {
+    if (tag === '.') {
+        return {
+            get: function(s){ return s;}
+        };
+    }
+    const expr = expressions.compile(
+        tag.replace(/(’|‘)/g, "'").replace(/(“|”)/g, '"')
+    );
+    return {
+        get: function(scope, context) {
+            let obj = {};
+            const scopeList = context.scopeList;
+            const num = context.num;
+            for (let i = 0, len = num + 1; i < len; i++) {
+                obj = assign(obj, scopeList[i]);
+            }
+            return expr(scope, obj);
+        }
+    };
+}
 
 const crearArchivo = async( codigo, data, nombreArchivo, alumno ) => {
 
@@ -245,7 +296,7 @@ const crearArchivo = async( codigo, data, nombreArchivo, alumno ) => {
     const zip = new PizZip(content);
     let doc;
     try {
-        doc = new Docxtemplater(zip);
+        doc = new Docxtemplater(zip, {parser:angularParser});
     } catch (error) {
         console.log(error)
     }
@@ -271,7 +322,6 @@ const crearArchivo = async( codigo, data, nombreArchivo, alumno ) => {
 
 }
 
-
 const borrarArchivo = (path) => {
 
     if ( fs.existsSync( path ) ) {
@@ -285,7 +335,7 @@ const borrarArchivo = (path) => {
 
 
 module.exports = {
-    generateFile,
+    generateFileItems,
     uploadFile,
     obtenerFile
 }

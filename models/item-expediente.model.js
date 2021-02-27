@@ -1,6 +1,9 @@
 const { Schema, model, Types } = require('mongoose');
 const Expediente = require('./expediente.model');
-const Periodo = require('./periodo.model');
+const Solicitud = require('./solicitud.model');
+const moment = require('moment-timezone')
+/* moment.locale('es-mx');
+moment.tz('America/Cancun'); */
 
 const ItemExpedienteSchema = Schema({
     
@@ -16,10 +19,10 @@ const ItemExpedienteSchema = Schema({
     archivoTemp: { type: String },
     archivo: { type: String },
     
-    fecha_inicial: { type: Date, default: Date.now() },
-    fecha_limite: { type: Date, default: Date.now() },
-    fecha_entrega: { type: Date },
-    fecha_validacion: { type: Date },
+    fecha_inicial: { type: String, default: moment().format("YYYY-MM-DD") },
+    fecha_limite: { type: String, default: moment().format("YYYY-MM-DD") },
+    fecha_entrega: { type: String },
+    fecha_validacion: { type: String },
 
     usuario_valido: { type: Types.ObjectId, ref: 'Usuario'}, 
 
@@ -40,7 +43,7 @@ const ItemExpedienteSchema = Schema({
     // Requiere reenvio
     reenvio_required: { type: Boolean, default: false },
     // el item es de vinculacion a alumno
-    entrante: { type: Boolean, default: false},
+    isEntrante: { type: Boolean, default: false},
     // Documento que no se genera
     entrega: { type: Boolean, default: false },
 
@@ -54,41 +57,52 @@ const ItemExpedienteSchema = Schema({
     // El item ya finalizo, esta terminado
     finalizado: { type: Boolean, default: false },
 
+    isBimestral: { type: Boolean },
+    isEvaluacion: { type: Boolean },
+    numero_bimestre: { type: Number },
+
 
 }, { collection: 'items'});
 
 
 
 ItemExpedienteSchema.method('toJSON', function() {
-    const { __v, updated_at, fecha_inicial, fecha_limite, fecha_entrega, fecha_validacion, ...object } = this.toObject();
-
-    const fiDate = new Date(fecha_inicial);
-    const flDate = new Date(fecha_limite);
- 
-   if( fecha_entrega ){
-       const feDate = new Date(fecha_entrega);
-       object.fecha_entrega    = feDate.toISOString().substring(0,10);
-    }
-
-    if ( fecha_validacion ) {
-        const fvDate = new Date(fecha_validacion);
-        object.fecha_validacion = fvDate.toISOString().substring(0,10);
-    }
-
-    object.fecha_inicial    = fiDate.toISOString().substring(0,10);
-    object.fecha_limite     = flDate.toISOString().substring(0,10);
-    
-
+    const { __v, ...object } = this.toObject();
     return object;
 })  
 
 
 ItemExpedienteSchema.pre('save', async function(next) {
 
+  
+    const solicitud = await Solicitud.findOne({alumno:this.alumno});
+    const { inicio_servicio, termino_servicio } = solicitud;
+
+
+    const fis = new Date(inicio_servicio);
+    const fts = new Date(termino_servicio);
     
-    /* const periodoProximo = await Periodo.findOne({isProximo:true});
-    this.periodo = periodoProximo;
- */
+    if ( this.isBimestral && this.numero_bimestre == 1) {
+        
+        this.fecha_inicial = new Date(fis.setMonth( fis.getMonth() + 2 )).toISOString().slice(0,10);
+        this.fecha_limite = new Date(fis.setMonth( fis.getMonth() + 4 )).toISOString().slice(0,10);
+
+    } else if ( this.isBimestral && this.numero_bimestre == 2) {
+        
+        this.fecha_inicial = new Date(fis.setMonth( fis.getMonth() + 4 )).toISOString().slice(0,10);
+        this.fecha_limite = this.fecha_inicial;
+
+    } else if ( this.isBimestral && this.numero_bimestre == 3) {
+        
+        this.fecha_inicial = fts.toISOString().slice(0,10);
+        this.fecha_limite = this.fecha_inicial;
+
+    } 
+
+    
+
+    /*const periodoProximo = await Periodo.findOne({isProximo:true})
+      this.periodo = periodoProximo*/
 
     const expediente = await Expediente.findById(this.expediente);
     this.periodo = expediente.periodo;

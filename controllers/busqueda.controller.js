@@ -97,7 +97,6 @@ const getColeccion = async(req, res = response) => {
             const codigo = req.query.codigo;
             const status = req.query.status;
 
-            console.log(status)
             let documentos = [];
             switch( status ) {
                 case 'pendiente':

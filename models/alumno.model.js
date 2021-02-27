@@ -1,5 +1,6 @@
 const { Schema, model, Types } = require('mongoose');
 const Periodo = require('./periodo.model');
+const moment = require('moment-timezone');
 
 const AlumnoSchema = Schema({
     /* =============
@@ -9,7 +10,7 @@ const AlumnoSchema = Schema({
     apellido_paterno: { type: String }, 
     apellido_materno: { type: String }, 
     sexo: { type: String, required: true },
-    fecha_nacimiento: { type: Date, required: true },
+    fecha_nacimiento: { type: String, required: true },
     numero_control: { type: String, required: true, unique: true },
     carrera: { type: Types.ObjectId, ref: 'Carrera', required: true },
     creditos_acumulados: { type: Number, required: true },
@@ -51,16 +52,16 @@ const AlumnoSchema = Schema({
 
 
 AlumnoSchema.method('toJSON', function() {
-    const { __v, password, fecha_nacimiento, ...object } = this.toObject(); 
-    const bDate = new Date(fecha_nacimiento);
-    object.fecha_nacimiento =  bDate.toISOString().substring(0,10);
+    const { __v, password,/*  fecha_nacimiento, */ ...object } = this.toObject(); 
+    /* const bDate = new Date(fecha_nacimiento);
+    object.fecha_nacimiento =  bDate.toISOString().substring(0,10); */
     return object;
 })
 
 AlumnoSchema.pre('save', async function(next){
 
     // Calcular Edad
-    let hoy = new Date();
+    let hoy = new Date( moment().format("YYYY-MM-DD") );
     let cumple = new Date(this.fecha_nacimiento);
     let edad = hoy.getFullYear() - cumple.getFullYear();
     let m = hoy.getMonth() - cumple.getMonth();

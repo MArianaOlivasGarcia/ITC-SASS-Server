@@ -1,17 +1,21 @@
 const { response } = require("express");
 const path = require('path');
 const fs = require('fs');
+const libre = require('libreoffice-convert-win');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater')
+const moment = require("moment-timezone");
+
+const expressions = require('angular-expressions');
+const assign = require("lodash/assign");
+
 
 const Solicitud = require('../models/solicitud.model');
 const Alumno = require('../models/alumno.model');
 const Usuario = require('../models/usuario.model');
 const ItemCarrera = require("../models/item-carrera.model");
 const Proyecto = require("../models/proyecto.model");
-const Expediente = require("../models/expediente.model");
-const Item = require("../models/item-expediente.model");
-const { getEstructuraExpediente } = require("../helpers/expediente.helper");
+
 
 
 const getByStatus = async(req, res = response) => {
@@ -265,12 +269,13 @@ const create = async(req, res = response) => {
     const alumno = req.uid;
     const {proyecto, inicio_servicio, termino_servicio } = req.body;
 
-    const hoy = Date.now();
+    const today = moment().format("YYYY-MM-DD");
+    const hoy = new Date(today);
 
     const proyectodb = await Proyecto.findById(proyecto._id).populate('periodo');
-    const { fecha_inicio, fecha_termino } = proyectodb.periodo.recepcion_solicitudes
-    const fi = new Date(fecha_inicio).getTime();
-    const ft = new Date(fecha_termino).getTime();
+    const { inicio, termino } = proyectodb.periodo.recepcion_solicitudes
+    const fi = new Date(inicio).getTime();
+    const ft = new Date(termino).getTime();
     
     if ( hoy < fi  ){
         return res.status(400).json({
@@ -340,7 +345,7 @@ const create = async(req, res = response) => {
             rechazado: false,
             aceptado: false,
             pendiente: true,
-            fecha_solicitud: Date.now(),
+            fecha_solicitud: moment().format("YYYY-MM-DD"),
             error: undefined,
             fecha_validacion: undefined
         }
@@ -500,7 +505,7 @@ const aceptar = async(req, res = response) => {
             aceptado: true,
             rechazado: false,
             error: undefined,
-            fecha_validacion: Date.now()
+            fecha_validacion: moment().format("YYYY-MM-DD")
         }
 
         const solicitudActualizada = await Solicitud.findByIdAndUpdate(idSolicitud, data, {new:true} )
@@ -544,31 +549,39 @@ const aceptar = async(req, res = response) => {
         await alumno.save();
  
         // GENERAR ARCHIVO
-
-        const isDate = new Date(solicitudActualizada.inicio_servicio);
-        const tsDate = new Date(solicitudActualizada.termino_servicio);
-
+        const fechaCompleta = moment().format("DD MMMM YYYY")
 
         const dataFile = {
             alumno: solicitudActualizada.alumno.toJSON(),
             proyecto: solicitudActualizada.proyecto.toJSON(),
             periodo: solicitudActualizada.proyecto.periodo.toJSON(),
-            inicio_servicio: isDate.toISOString().substring(0,10),
-            termino_servicio: tsDate.toISOString().substring(0,10)
+            inicio_servicio: solicitudActualizada.inicio_servicio,
+            termino_servicio: solicitudActualizada.termino_servicio,
+            hoy: moment().format("DD/MM/YYYY"),
+            dia: fechaCompleta.split(' ')[0],
+            mes: fechaCompleta.split(' ')[1],
+            anio: fechaCompleta.split(' ')[2]
         }
 
-        const extencion = 'docx';
-        const nombreArchivo = `${alumno.numero_control}-${solicitudActualizada.codigo}.${extencion}`;
+        const extencion = '.docx';
+        const nombreSolicitud = `${alumno.numero_control}-${solicitudActualizada.codigo}${extencion}`;
+        const nombrePresentacion = `${alumno.numero_control}-${'ITC-VI-PO-002-06'}${extencion}`;
         
+        
+            await crearArchivo( solicitudActualizada.codigo, dataFile, nombreSolicitud, alumno ),
+            await convertirPDF(nombreSolicitud, alumno.numero_control),
+           
+/* 
+             */
+         
 
-        await crearArchivo( solicitudActualizada.codigo, dataFile, nombreArchivo, solicitudActualizada.alumno );
- 
-
-        solicitudActualizada.archivo = nombreArchivo;
+        solicitudActualizada.archivo = `${nombreSolicitud.split('.')[0]}.pdf`;
         await solicitudActualizada.save();
         
 
-        
+        /* await crearArchivo( 'ITC-VI-PO-002-06', dataFile, nombrePresentacion, alumno ),
+        await convertirPDF(nombrePresentacion, alumno.numero_control)
+         */
         res.json({
             status: true,
             message: 'La solicitud ha sido aceptada.',
@@ -637,7 +650,7 @@ const rechazar = async(req, res = response) => {
             pendiente: false,
             aceptado: false,
             rechazado: true,
-            fecha_validacion: Date.now()
+            fecha_validacion: moment().format("YYYY-MM-DD")
         }
 
         const solicitudActualizada = await Solicitud.findByIdAndUpdate(idSolicitud, data, {new:true} )
@@ -676,12 +689,66 @@ const rechazar = async(req, res = response) => {
 
 }
 
+const getCantidadAceptadasAndRechazadas = async(req, res = response) => {
 
+    try{
+
+        const periodo = req.params.periodo;
+
+        const [ totalAceptado, totalRechazado, totalPendiente ] = await Promise.all([
+                    Solicitud.countDocuments({aceptado:true, periodo}), 
+                    Solicitud.countDocuments({rechazado:true, periodo}), 
+                    Solicitud.countDocuments({pendiente:true, periodo}), 
+        ]);
+
+        res.status(200).json({
+            status: true,
+            totalAceptado,
+            totalRechazado,
+            totalPendiente
+        })
+
+    }catch(error){
+        console.log(error);
+        return res.status(500).json({
+            status: false,
+            message: 'Hable con el administrador'
+        })
+    }
+
+
+}
 
 /***********
 
 *************/
+expressions.filters.lower = function(input) {
+    if(!input) return input;
+    return input.toLowerCase();
+}
 
+
+function angularParser(tag) {
+    if (tag === '.') {
+        return {
+            get: function(s){ return s;}
+        };
+    }
+    const expr = expressions.compile(
+        tag.replace(/(’|‘)/g, "'").replace(/(“|”)/g, '"')
+    );
+    return {
+        get: function(scope, context) {
+            let obj = {};
+            const scopeList = context.scopeList;
+            const num = context.num;
+            for (let i = 0, len = num + 1; i < len; i++) {
+                obj = assign(obj, scopeList[i]);
+            }
+            return expr(scope, obj);
+        }
+    };
+}
 
 
 const crearArchivo = async( codigo, data, nombreArchivo, alumno ) => {
@@ -694,7 +761,7 @@ const crearArchivo = async( codigo, data, nombreArchivo, alumno ) => {
     const zip = new PizZip(content);
     let doc;
     try {
-        doc = new Docxtemplater(zip);
+        doc = new Docxtemplater(zip, {parser:angularParser});
     } catch (error) {
         console.log(error)
     }
@@ -715,7 +782,36 @@ const crearArchivo = async( codigo, data, nombreArchivo, alumno ) => {
         fs.mkdirSync(carpetaAlumno)
     }
 
-    fs.writeFileSync(path.resolve(__dirname, `${carpetaAlumno}/${nombreArchivo}`), buf)
+    const archivoPath = path.resolve(__dirname, `${carpetaAlumno}/${nombreArchivo}`)
+    console.log(archivoPath)
+    fs.writeFileSync(archivoPath, buf)
+
+    
+}
+
+
+const convertirPDF = async(nombreArchivo, numeroControl) => {
+
+    const extend = '.pdf'
+
+    const carpetaAlumno = path.resolve(__dirname, `../uploads/expedientes/${numeroControl}`);
+
+    if ( !fs.existsSync(carpetaAlumno) ) {
+        fs.mkdirSync(carpetaAlumno)
+    }
+
+    const enterPath = path.resolve(__dirname, `${carpetaAlumno}/${nombreArchivo}`);
+    const outputPath = path.resolve(__dirname, `${carpetaAlumno}/${nombreArchivo.split('.')[0]}${extend}`);
+
+    const file = fs.readFileSync(enterPath);
+    // Convert it to pdf format with undefined filter (see Libreoffice doc about filter)
+    libre.convert(file, extend, undefined, (err, done) => {
+        if( err ) {
+            console.log('ERROR' + err)
+        }
+
+        fs.writeFileSync(outputPath, done)
+    })
 
 }
 
@@ -735,6 +831,7 @@ module.exports = {
     getById,
     getAceptadaByAlumno,
     getSolicitudAndProyectoPersonal,
+    getCantidadAceptadasAndRechazadas,
     aceptar,
     rechazar,
     create

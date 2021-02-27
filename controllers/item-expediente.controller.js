@@ -384,7 +384,7 @@ const actualizarFechasByCodigoAndPeriodo = async (req, res = response ) => {
 
         return res.status(200).json({
             status: true,
-            message: 'Fechas de los items actualizadas con éxito.'
+            message: 'Fechas actualizadas con éxito.'
         })
 
     } catch(error) {

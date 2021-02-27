@@ -1,7 +1,6 @@
 const { Schema, model, Types } = require('mongoose');
-const Proyecto = require('./proyecto.model');
 const Periodo = require('./periodo.model');
-
+const moment = require('moment-timezone');
 
 const SolicitudSchema = Schema({
 
@@ -9,14 +8,14 @@ const SolicitudSchema = Schema({
     alumno: { type: Types.ObjectId, ref: 'Alumno', required: true },
     proyecto: { type: Types.ObjectId, ref: 'Proyecto', required: true },
     
-    fecha_solicitud: { type: Date, default: Date.now() },
+    fecha_solicitud: { type: String, default: moment().format("YYYY-MM-DD") },
     // Usuario que valido o rechazo
     usuario_valido: { type: Types.ObjectId, ref: 'Usuario'}, 
-    fecha_validacion: { type: Date },
+    fecha_validacion: { type: String },
 
     // Fecha Realizacion Servicio Social
-    inicio_servicio: { type: Date },
-    termino_servicio: { type: Date },
+    inicio_servicio: { type: String },
+    termino_servicio: { type: String },
    
     
     // Estado de la solicitud
@@ -36,19 +35,7 @@ const SolicitudSchema = Schema({
 
 
 SolicitudSchema.method('toJSON', function() {
-    const { __v, fecha_solicitud, inicio_servicio, termino_servicio, ...object } = this.toObject();
-    
-    const fsDate = new Date(fecha_solicitud);
-    object.fecha_solicitud = fsDate.toISOString().substring(0,10);
-
-    if( inicio_servicio && termino_servicio ){
-        const isDate = new Date(inicio_servicio);
-        const tsDate = new Date(termino_servicio);
-        object.inicio_servicio = isDate.toISOString().substring(0,10);
-        object.termino_servicio = tsDate.toISOString().substring(0,10);
-    }
-
-    
+    const { __v, ...object } = this.toObject();
     return object;
 })
 
