@@ -6,6 +6,7 @@ const ItemCarreraSchema = Schema({
     proyecto: { type: Types.ObjectId, ref: 'Proyecto', required: true}, 
 
     cantidad: { type: Number, required: true },
+    disponibilidad: { type: Number, required: true },
     carrera: { type: Types.ObjectId, ref: 'Carrera', required: true}, 
 
 }, {collection: 'itemsCarrera'});

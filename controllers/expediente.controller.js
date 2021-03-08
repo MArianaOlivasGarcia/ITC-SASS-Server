@@ -1,10 +1,11 @@
 const { response } = require("express");
-const { getEstructuraExpediente } = require("../helpers/expediente.helper");
+const { getEstructuraExpediente, getEstructuraExpedienteBasica } = require("../helpers/expediente.helper");
 const Expediente = require("../models/expediente.model");
 const Item = require('../models/item-expediente.model');
 const Alumno = require('../models/alumno.model');
 const Solicitud = require('../models/solicitud.model');
 const Periodo = require("../models/periodo.model");
+const moment = require('moment-timezone');
 
 const create = async(req, res = response) => {
 
@@ -78,6 +79,17 @@ const crearExpedientes = async(req, res = response) => {
     try{
         const periododb = await Periodo.findById(periodo);
 
+        const { recepcion_solicitudes: { termino } } = periododb;
+        const hoy = new Date(moment().format("YYYY-MM-DD")).getTime();
+        const frt = new Date(termino).getTime();
+    
+        if ( hoy <= frt ){
+            return res.status(400).json({
+                status: false,
+                message: `Aun no termina la recepción de solicitudes de servicio social para el periodo ${periododb.nombre}.`
+            })
+        }
+
         if ( periododb.apertura_expedientes ){
             return res.status(400).json({
                 status: false,
@@ -96,6 +108,7 @@ const crearExpedientes = async(req, res = response) => {
 
         
         const existAceptadas = await Solicitud.find({aceptado:true, periodo:periododb})
+                                        .populate('alumno')
 
         if ( existAceptadas.length == 0 ){
             return res.status(400).json({
@@ -104,21 +117,26 @@ const crearExpedientes = async(req, res = response) => {
             })
         }
 
+        
 
+        
         existAceptadas.forEach( async solicitud => {
+            
+            const {alumno} = solicitud;
+            const {numero_control} = alumno;
 
-            const expediente = new Expediente({alumno:solicitud.alumno, solicitud })
+            const expediente = new Expediente({alumno, solicitud })
             await expediente.save()
-
-             const estructura = getEstructuraExpediente(expediente._id, solicitud.alumno);
+            
+            const estructura = getEstructuraExpediente(expediente._id, alumno, numero_control);
 
             for (let i = 0; i < estructura.length; i++) {
                 const item = new Item( estructura[i] );
                 await item.save();
             }
- 
+            
         });
-
+        
         periododb.apertura_expedientes = true;
         await periododb.save();
 
@@ -220,7 +238,7 @@ const getEstructura = async(req, res = response) => {
     try{
 
         res.status(200).json({
-            estructura: getEstructuraExpediente()
+            estructura: getEstructuraExpedienteBasica()
         })
 
     } catch(error) {

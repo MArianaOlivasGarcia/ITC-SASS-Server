@@ -36,7 +36,7 @@ const getAllPaginados = async(req, res = response) => {
         const desde = Number(req.query.desde) || 0;
 
         const [carreras, total] = await Promise.all([
-            Carrera.find({ nombre: { $nin: ['TODAS'] } }).skip(desde).limit(5),
+            Carrera.find({ nombre: { $nin: ['TODAS'] } }).skip(desde).limit(5).sort('nombre'),
             Carrera.countDocuments({ nombre: { $nin: ['TODAS'] } })
         ]);
 

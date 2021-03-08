@@ -1,8 +1,6 @@
 const { response } = require("express");
 const Periodo = require("../models/periodo.model");
-
-
-
+const moment = require('moment-timezone');
 
 const getAll = async(req, res = response) => {
 
@@ -71,35 +69,35 @@ const create = async(req, res = response) => {
         })
     }
 
-    const existActual = await Periodo.findOne({isActual:true});
+    const existProximo = await Periodo.findOne({isProximo:true})
+    const { recepcion_solicitudes: { termino } } = existProximo;
+    const hoy = new Date(moment().format("YYYY-MM-DD")).getTime();
+    const frt = new Date(termino).getTime();
 
-    if( !isActual && !existActual){
+    if ( hoy <= frt ){
         return res.status(400).json({
             status: false,
-            message: 'Almenos debe de existir un periodo actual.'
+            message: `Aun no termina la recepción de solicitudes de servicio social para el periodo ${existProximo.nombre}.`
         })
     }
-
-    // Si el periodo es actual, cambiar el que actualimente isActual a false
-    if ( isActual && existActual) {
-        existActual.isActual = false;
-        await existActual.save();
-    } 
-
-    const existProximo = await Periodo.findOne({isProximo:true});
-
-    if( isProximo && existProximo ) {
-        existProximo.isProximo = false;
-        await existProximo.save();
-    }
+    
 
     const periodo = new Periodo(req.body);
+    
+    await Promise.all([
+        // El que era proximo ahora sera el actual
+        Periodo.findOneAndUpdate({isProximo:true}, {isProximo:false, isActual:true}),
+        // El que era actual ya no lo será
+        Periodo.findOneAndUpdate({isActual:true}, {isActual:false}),
+        
+        periodo.save()
+    ]);
 
-    await periodo.save();
+    
 
     res.status(201).json({
         status: true,
-        periodo
+        /* periodo */
     })
 
 }

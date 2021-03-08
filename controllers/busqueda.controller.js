@@ -1,5 +1,6 @@
 const { response } = require("express");;
 const Usuario = require('../models/usuario.model');
+const Aviso = require('../models/aviso.model');
 const Alumno = require('../models/alumno.model');
 const Dependencia = require('../models/dependencia.model');
 const Proyecto = require('../models/proyecto.model');
@@ -55,6 +56,10 @@ const getColeccion = async(req, res = response) => {
 
         case 'usuarios':
             data = await Usuario.find({nombre: regex})
+        break;
+
+        case 'avisos':
+            data = await Aviso.find({titulo: regex})
         break;
 
         case 'alumnos':
@@ -150,7 +155,7 @@ const getColeccion = async(req, res = response) => {
         default:
             return res.status(400).json({
                 status: false,
-                message: 'Las colecciones permitidas son usuarios, alumnos, dependencias, proyectos, solicitudes ó documentos.'
+                message: 'Las colecciones permitidas son usuarios, alumnos, avisos, dependencias, proyectos, solicitudes ó documentos.'
             })
 
     }

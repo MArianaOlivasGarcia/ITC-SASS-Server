@@ -15,6 +15,7 @@ const Alumno = require('../models/alumno.model');
 const Usuario = require('../models/usuario.model');
 const ItemCarrera = require("../models/item-carrera.model");
 const Proyecto = require("../models/proyecto.model");
+const Carrera = require("../models/carrera.model");
 
 
 
@@ -269,8 +270,8 @@ const create = async(req, res = response) => {
     const alumno = req.uid;
     const {proyecto, inicio_servicio, termino_servicio } = req.body;
 
-    const today = moment().format("YYYY-MM-DD");
-    const hoy = new Date(today);
+    
+    const hoy = new Date(moment().format("YYYY-MM-DD"));
 
     const proyectodb = await Proyecto.findById(proyecto._id).populate('periodo');
     const { inicio, termino } = proyectodb.periodo.recepcion_solicitudes
@@ -302,7 +303,7 @@ const create = async(req, res = response) => {
     } else if ( fis > ftp ){
         return res.status(400).json({
             status: false,
-            message: `La fecha de termino de servicio social tiene que ser menor ó igual a la fecha de termino del periodo ${proyectodb.periodo.nombre}.`
+            message: `La fecha de inicio de servicio social tiene que ser menor ó igual a la fecha de termino del periodo ${proyectodb.periodo.nombre}.`
         })
     }
 
@@ -331,11 +332,11 @@ const create = async(req, res = response) => {
 
     if ( hasRechazado ) {
 
+        // Si el proyecto de la solicitud rechazada es No es publico, borrarlo
         if ( !hasRechazado.proyecto.publico ) {
             await Proyecto.findByIdAndDelete(hasRechazado.proyecto._id);
         }
 
-        /* const proyecto = req.body; */
         const alumnodb = await Alumno.findById(alumno);
 
         const data = {
@@ -346,8 +347,7 @@ const create = async(req, res = response) => {
             aceptado: false,
             pendiente: true,
             fecha_solicitud: moment().format("YYYY-MM-DD"),
-            error: undefined,
-            fecha_validacion: undefined
+            $unset: {error: 1, fecha_validacion: 1},
         }
 
         const solicitudActualizada = await Solicitud.findByIdAndUpdate( hasRechazado._id, data, {new:true})
@@ -362,13 +362,18 @@ const create = async(req, res = response) => {
                                                         populate: { path: 'dependencia'}
                                                     })
         // Obtener el proyecto y quitarle 1 a la cantidad del itemCarrera
-        const itemCarrera = await ItemCarrera.findOne({proyecto, carrera: alumnodb.carrera})
-        itemCarrera.cantidad = itemCarrera.cantidad - 1;
-        if ( itemCarrera.cantidad == 0 ){
-            await itemCarrera.deleteOne();
-        } else {
-            await itemCarrera.save();
-        }             
+        const todas = await Carrera.findOne({nombre:'TODAS'});
+        const itemCarrera = await ItemCarrera.findOne({proyecto, $or: [{carrera: alumnodb.carrera}, {carrera: todas}] })
+
+        if ( itemCarrera.disponibilidad == 0 ){
+            res.status(400).json({
+                status: false,
+                message: 'Ya no hay un espacio disponibles para ti.'
+            }) 
+        }
+        itemCarrera.disponibilidad = itemCarrera.disponibilidad - 1;
+        await itemCarrera.save();
+
 
         return res.json({
             status: true,
@@ -380,16 +385,23 @@ const create = async(req, res = response) => {
 
 
     // NO TIENE UNO RECHAZADO ENTONCES CREAR NUEVO
-    // Obtener el proyecto y quitarle 1 a la cantidad del itemCarrera
-    /* const proyecto = req.body; */
-    const alumnodb = await Alumno.findById(alumno);
-    const itemCarrera = await ItemCarrera.findOne({proyecto, carrera: alumnodb.carrera})
-    itemCarrera.cantidad = itemCarrera.cantidad - 1;
-    if ( itemCarrera.cantidad == 0 ){
-        await itemCarrera.deleteOne();
-    } else {
-        await itemCarrera.save();
+    // Obtener el proyecto y quitarle 1 a la disponiblidad del itemCarrera
+    const [alumnodb, todas] = await Promise.all([
+        Alumno.findById(alumno),
+        Carrera.findOne({nombre:'TODAS'})
+    ]);
+
+    const itemCarrera = await ItemCarrera.findOne({proyecto, $or: [{carrera: alumnodb.carrera}, {carrera: todas}] })
+    
+    if ( itemCarrera.disponibilidad == 0 ){
+        res.status(400).json({
+            status: false,
+            message: 'Ya no hay un espacio disponibles para ti.'
+        }) 
     }
+    itemCarrera.disponibilidad = itemCarrera.disponibilidad - 1;
+    await itemCarrera.save();
+    
 
     const data = {
         proyecto,
@@ -497,14 +509,30 @@ const aceptar = async(req, res = response) => {
             }) 
         }
 
+        // VERIFICAR QUE NO ESTE ACEPTADA
+        if ( solicitud.rechazado ) {
+            return res.status(400).json({
+                status: false,
+                message: `No puedes aceptar una solicitud rechazada.`
+            }) 
+        }
+
+        // VERIFICAR QUE NO ESTE ACEPTADA
+        if ( solicitud.aceptado ) {
+            return res.status(400).json({
+                status: false,
+                message: `La solicitud ya ha sido aceptada.`
+            }) 
+        }
+
         const data = {
             usuario_valido: idUser,
-            inicio_servicio,
-            termino_servicio,
+            /* inicio_servicio,
+            termino_servicio, */
             pendiente: false,
             aceptado: true,
             rechazado: false,
-            error: undefined,
+            $unset: {error: 1},
             fecha_validacion: moment().format("YYYY-MM-DD")
         }
 
@@ -519,10 +547,7 @@ const aceptar = async(req, res = response) => {
                                                                 path: 'proyecto',
                                                                 populate: { path: 'dependencia' }
                                                             })
-                                                            .populate({
-                                                                path: 'proyecto',
-                                                                populate: { path: 'periodo' }
-                                                            })
+                                                            .populate('periodo')
                                                             .populate('usuario_valido')
 
 
@@ -554,7 +579,7 @@ const aceptar = async(req, res = response) => {
         const dataFile = {
             alumno: solicitudActualizada.alumno.toJSON(),
             proyecto: solicitudActualizada.proyecto.toJSON(),
-            periodo: solicitudActualizada.proyecto.periodo.toJSON(),
+            periodo: solicitudActualizada.periodo.toJSON(),
             inicio_servicio: solicitudActualizada.inicio_servicio,
             termino_servicio: solicitudActualizada.termino_servicio,
             hoy: moment().format("DD/MM/YYYY"),
@@ -566,11 +591,32 @@ const aceptar = async(req, res = response) => {
         const extencion = '.docx';
         const nombreSolicitud = `${alumno.numero_control}-${solicitudActualizada.codigo}${extencion}`;
         const nombrePresentacion = `${alumno.numero_control}-${'ITC-VI-PO-002-06'}${extencion}`;
+        const nombreHojaDatos = `${alumno.numero_control}-${'HOJA-DE-DATOS'}${extencion}`;
         
         
-            await crearArchivo( solicitudActualizada.codigo, dataFile, nombreSolicitud, alumno ),
+            await Promise.all([
+                crearArchivo( solicitudActualizada.codigo, dataFile, nombreSolicitud, alumno ),
+                crearArchivo( 'ITC-VI-PO-002-06', dataFile, nombrePresentacion, alumno ),
+                crearArchivo( 'HOJA-DE-DATOS', dataFile, nombreHojaDatos, alumno ),
+            ]);
+
+            
             await convertirPDF(nombreSolicitud, alumno.numero_control),
+
+            setTimeout(async ()=>{
+                await convertirPDF(nombrePresentacion, alumno.numero_control)
+            }, 15000);
+            
+            setTimeout(async ()=>{
+                await convertirPDF(nombreHojaDatos, alumno.numero_control)
+            }, 30000);
            
+            // Borrar los .docx
+           /*  setTimeout(()=>{
+                borrarArchivo( `./uploads/expedientes/${alumno.numero_control}/${nombreSolicitud}` );
+                borrarArchivo( `./uploads/expedientes/${alumno.numero_control}/${nombrePresentacion}` );
+                borrarArchivo( `./uploads/expedientes/${alumno.numero_control}/${nombreHojaDatos}` );
+            }, 30000); */
 /* 
              */
          
@@ -579,7 +625,7 @@ const aceptar = async(req, res = response) => {
         await solicitudActualizada.save();
         
 
-        /* await crearArchivo( 'ITC-VI-PO-002-06', dataFile, nombrePresentacion, alumno ),
+        /* 
         await convertirPDF(nombrePresentacion, alumno.numero_control)
          */
         res.json({
@@ -608,7 +654,7 @@ const rechazar = async(req, res = response) => {
 
     try {
 
-        const solicitud = await Solicitud.findById(idSolicitud);
+        const solicitud = await Solicitud.findById(idSolicitud).populate('proyecto');
 
         if ( !solicitud ) {
             return res.status(404).json({
@@ -621,29 +667,32 @@ const rechazar = async(req, res = response) => {
         if ( solicitud.aceptado ) {
             return res.status(400).json({
                 status: false,
-                message: `La solicitud ya ha sido aceptada.`
+                message: `No puedes rechazar una solicitud aceptada.`
             }) 
         }
 
-       /*  if ( solicitud.proyecto.carreras ){ */
-            // Obtener el proyecto y sumarle 1 a la cantidad del itemCarrera
-            const alumnodb = await Alumno.findById(solicitud.alumno);
-                    
-            const itemCarrera = await ItemCarrera.findOne({proyecto: solicitud.proyecto, carrera: alumnodb.carrera})
-            
-            if ( !itemCarrera ) {
-                const newItemCarrera = new ItemCarrera({proyecto: solicitud.proyecto, carrera: alumnodb.carrera, cantidad:1})
-                await newItemCarrera.save();
-            } else {
-                itemCarrera.cantidad = itemCarrera.cantidad + 1;
-                await itemCarrera.save();
-            }
-            
-            
-/* 
-        } */
+        // VERIFICAR QUE NO ESTE RECHAZADA
+        if ( solicitud.rechazado ) {
+            return res.status(400).json({
+                status: false,
+                message: `La solicitud ya ha sido rechazada.`
+            }) 
+        }
 
+        const { proyecto } = solicitud;
 
+        if ( proyecto.publico ) {
+            const [alumnodb, todas] = await Promise.all([
+                Alumno.findById(solicitud.alumno),
+                Carrera.findOne({nombre:'TODAS'})
+            ]);
+            const itemCarrera = await ItemCarrera.findOne({proyecto, $or: [{carrera: alumnodb.carrera}, {carrera: todas}] })
+            
+            itemCarrera.disponibilidad = itemCarrera.disponibilidad + 1;
+            await itemCarrera.save();
+        }
+
+              
         const data = {
             usuario_valido: idUser,
             error: req.body,
@@ -725,6 +774,11 @@ const getCantidadAceptadasAndRechazadas = async(req, res = response) => {
 expressions.filters.lower = function(input) {
     if(!input) return input;
     return input.toLowerCase();
+}
+
+expressions.filters.upper = function(input) {
+    if(!input) return input;
+    return input.toUpperCase();
 }
 
 

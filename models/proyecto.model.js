@@ -14,10 +14,14 @@ const ProyectoSchema = Schema({
     tipo: { type: String },
     horario: { type: String },
     apoyo_economico: { type: Boolean, default: false },
+    instalacion: { type: Boolean, default: false },
+
     responsable: { type: String  },
     puesto_responsable: { type: String },
-    instalacion: { type: Boolean, default: false },
+    email_responsable: { type: String },
+    telefono_responsable: { type: String },
     
+    // TODO: Cambiar la busqueda de proyectos 
     carreras: [{
         cantidad: {type: Number},
         carrera: {type: Types.ObjectId, ref: 'Carrera'}

@@ -9,8 +9,11 @@ const ExpedienteSchema = Schema({
     alumno: { type: Types.ObjectId, ref: 'Alumno', required: true },
     items: [{ type: Types.ObjectId, ref: 'Item'}],   
     apertura: { type: String, default: moment().format("YYYY-MM-DD") },
-    cierre: { type: Date },
+    cierre: { type: String },
     periodo: { type: Types.ObjectId, ref: 'Periodo' },
+
+    finalizado: { type: Boolean, default: false },
+
 
 }, { collection: 'expedientes'});
 

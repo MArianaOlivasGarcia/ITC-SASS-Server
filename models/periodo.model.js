@@ -9,7 +9,7 @@ const PeriodoSchema = Schema({
     fecha_inicio: { type: String, required: true },
     fecha_termino: { type: String, required: true },
     isActual: { type: Boolean, default: false },
-    isProximo: { type: Boolean, default: false },
+    isProximo: { type: Boolean, default: true },
     //AutoIncrementable
     recepcion_solicitudes: {
         inicio: { type: String },

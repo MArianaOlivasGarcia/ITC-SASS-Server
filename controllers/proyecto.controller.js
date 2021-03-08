@@ -4,7 +4,9 @@ const Alumno = require("../models/alumno.model");
 const Solicitud = require('../models/solicitud.model')
 const Periodo = require('../models/periodo.model');
 const ItemCarrera = require("../models/item-carrera.model");
-const { Types } = require('mongoose');
+const Carrera = require("../models/carrera.model");
+const moment = require("moment-timezone");
+const { Types } = require("mongoose");
 
 
 const create = async(req, res = response) => {
@@ -80,10 +82,10 @@ const createByAlumno = async(req, res = response ) => {
         }
 
         // VALIDAR LAS FECHAS DE RECEPCION DE SOLICITUDES
-        const hoy = Date.now();
-        const { fecha_inicio, fecha_termino } = periodoProximo.recepcion_solicitudes
-        const fi = new Date(fecha_inicio).getTime();
-        const ft = new Date(fecha_termino).getTime();
+        const hoy = new Date( moment().format("YYYY-MM-DD") );
+        const { inicio, termino } = periodoProximo.recepcion_solicitudes
+        const fi = new Date(inicio).getTime();
+        const ft = new Date(termino).getTime();
         
         if ( hoy < fi  ){
             return res.status(400).json({
@@ -127,7 +129,7 @@ const createByAlumno = async(req, res = response ) => {
                 alumno,
                 proyecto: proyectoNew,
                 inicio_servicio,
-                termino_servicio,
+                termino_servicio
             })
             
             await Promise.all([
@@ -165,9 +167,8 @@ const createByAlumno = async(req, res = response ) => {
                 rechazado: false,
                 aceptado: false,
                 pendiente: true,
-                error: undefined,
-                fecha_solicitud: Date.now(),
-                fecha_validacion: undefined
+                fecha_solicitud: moment().format("YYYY-MM-DD"),
+                $unset: {fecha_validacion: 1, error: 1},
             }
 
             await Promise.all([
@@ -218,7 +219,7 @@ const getAllByTipoAndPeriodo = async(req, res = response) => {
                 ]);
             break;
 
-            case 'privado':
+            case 'personal':
                 const solicitudes = await Solicitud.find({aceptado:true})
                                                 .skip(desde).limit(5)
                                                 .populate('proyecto')
@@ -252,7 +253,7 @@ const getAllByTipoAndPeriodo = async(req, res = response) => {
             default:
                 return res.status(400).json({ 
                     status: false,
-                    message: 'El tipo válido tiene que ser publico o privado.'
+                    message: 'El tipo válido tiene que ser publico o personal.'
                 })
         }
 
@@ -337,11 +338,11 @@ const getAllByCarreraAndPeriodoProximo = async(req, res = response) => {
                 message: 'No hay un periodo proximo.'
             })
         }
+
+        const todas = await Carrera.findOne({nombre:'TODAS'});
     
-/*         const hoy = new Date();
- */ 
         const [proyectos, total] = await Promise.all([
-            Proyecto.find({ 'carreras.carrera': carrera,
+            Proyecto.find({ $or:[{'carreras.carrera': carrera}, {'carreras.carrera': todas }],
                             'carreras.cantidad': { $gt: 0 },
                             publico: true, 
                             periodo: periodoProximo,
@@ -355,7 +356,7 @@ const getAllByCarreraAndPeriodoProximo = async(req, res = response) => {
                     path: 'carreras',
                     populate: { path: 'carrera'}
                 }),
-            Proyecto.countDocuments({ 'carreras.carrera': carrera,
+            Proyecto.countDocuments({ $or:[{'carreras.carrera': carrera}, {'carreras.carrera': todas }],
                                       'carreras.cantidad': { $gt: 0 },
                                       publico: true, 
                                       periodo: periodoProximo,
